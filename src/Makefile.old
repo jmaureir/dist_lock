@@ -1,0 +1,11 @@
+CC=g++ -g 
+CFLAGS= -std=c++11 -DREENTRANT -fext-numeric-literals
+LDFLAGS= -std=c++11 -lpthread -lrt
+
+all:
+	$(CC) -c $(CFLAGS) *.cc 
+	$(CC) *.o -o dist_lock $(LDFLAGS)
+
+clean:
+	rm -f *.o
+	rm -f dist_lock
