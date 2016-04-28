@@ -71,17 +71,18 @@ int main(int argc, char **argv) {
         std::cerr << "DistributedLock error" << std::endl;
         return 3;
     }
+    int status = 0;
 
     if (dl->adquire(resource)) {
         std::cout << "resource adquired!" << std::endl;
         std::cout << "executing: " << cmd.str() << std::endl;
         pid_t pid;
-        int status = 0;
 
         pid = fork();
 
         if (pid == 0) {
-            execl("/bin/sh", "sh", "-c", cmd.str().c_str(), NULL);
+            int r = execl("/bin/sh", "sh", "-c", cmd.str().c_str(), NULL);
+            return r;
         } else  if (pid < 0) {
             std::cerr << "error forking the process" << std::endl;
             return 4;
@@ -89,6 +90,11 @@ int main(int argc, char **argv) {
             if (waitpid (pid, &status, 0) != pid) {
                 std::cerr << "error waiting for process" << std::endl;
             }
+            if ( WIFEXITED(status) ) {
+                int exit_code = WEXITSTATUS(status);
+                return exit_code;
+            }
+            return EXIT_FAILURE;
         }
     }
 
@@ -98,6 +104,6 @@ int main(int argc, char **argv) {
 
     delete(dl);
 
-    return 0;
+    return status;
 }
 
