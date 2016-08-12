@@ -4,9 +4,10 @@
  *
  * Author        : Juan Carlos Maureira
  * Created       : Wed 09 Dec 2015 04:07:14 PM CLT
- * Last Modified : Fri 12 Aug 2016 10:01:14 AM GYT
+ * Last Modified : Fri 12 Aug 2016 10:12:41 AM GYT
  *
  * (c) 2015-2016 Juan Carlos Maureira
+ * (c) 2016      Andrew Hart
  */
 #ifndef __DISTRIBUTEDLOCK__
 #define __DISTRIBUTEDLOCK__

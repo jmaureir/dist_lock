@@ -3,9 +3,10 @@
  *
  * Author        : Juan Carlos Maureira
  * Created       : Wed 09 Dec 2015 03:12:59 PM CLT
- * Last Modified : Fri 12 Aug 2016 10:10:46 AM GYT
+ * Last Modified : Fri 12 Aug 2016 10:12:27 AM GYT
  *
  * (c) 2015-2016 Juan Carlos Maureira
+ * (c) 2016      Andrew Hart
  */
 
 #include <iostream>
