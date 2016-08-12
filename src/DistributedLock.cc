@@ -4,8 +4,8 @@
  *
  * Author        : Juan Carlos Maureira
  * Created       : Wed 09 Dec 2015 04:09:39 PM CLT
- * Last Modified : Thu 11 Aug 2016 11:39:35 PM GYT
- * Last Modified : Thu 11 Aug 2016 11:39:35 PM GYT
+ * Last Modified : Fri 12 Aug 2016 12:44:37 AM GYT
+ * Last Modified : Fri 12 Aug 2016 12:44:37 AM GYT
  *
  * (c) 2015-2016 Juan Carlos Maureira
  */
@@ -33,9 +33,47 @@ void DistributedLock::Resource::run() {
     }
 }
 
+void DistributedLock::Resource::updateMember(unsigned int id, State state, unsigned int count) {
+
+    Member* m = this->getMember(id);
+    if (m==NULL) {
+        m = this->addMember(id);
+    }
+    m->count = count;
+    m->tp    = std::chrono::system_clock::now();
+    m->state = state;
+}
+
 void DistributedLock::Resource::stop() {
     this->running=false;
     cv.notify_all();
+}
+
+DistributedLock::Resource::Member* DistributedLock::Resource::getMember(unsigned int id) {
+    if (this->members.find(id)!=this->members.end()) {
+        return this->members[id];
+    }
+    return NULL;
+}
+
+DistributedLock::Resource::Member* DistributedLock::Resource::addMember(unsigned int id) {
+    Member* member = this->getMember(id);
+    if (member == NULL) {
+        member = new Member(id);
+        //TODO use a mutex for changing map
+        this->members[id] = member;
+    }
+    return member;
+}
+
+bool DistributedLock::Resource::removeMember(unsigned int id) {
+    Member* member = this->getMember(id);
+    if (member!=NULL) {
+        this->members.erase(id);
+        delete(member);
+        return true;
+    }
+    return false;
 }
 
 /* Distributed Lock implementation */
@@ -116,7 +154,6 @@ DistributedLock::Resource* DistributedLock::createResource(std::string res) {
         resource = this->resources[res];
     } else {
         resource = new Resource(this,res);
-        //resource->tp    = std::chrono::system_clock::now();
         this->resources.insert(std::make_pair(res, resource));
     }
     return resource;
@@ -188,10 +225,16 @@ void DistributedLock::actionPerformed(ActionEvent* evt) {
 
             Resource* resource = this->getResource(res);
             if (resource != NULL) {
+                Resource::State state = (Resource::State)pkt->getState();
+                resource->updateMember(pkt->getMemberId(), state, pkt->getCount());
+
                 if (resource->getState() == Resource::ADQUIRING && pkt->getState() == Resource::ADQUIRING) {
                     // collision!!!
                     cv.notify_all();
                 }
+
+                std::cout << *resource << std::endl;
+
             }
 
         } else {

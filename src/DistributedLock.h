@@ -4,7 +4,7 @@
  *
  * Author        : Juan Carlos Maureira
  * Created       : Wed 09 Dec 2015 04:07:14 PM CLT
- * Last Modified : Thu 11 Aug 2016 11:35:55 PM GYT
+ * Last Modified : Fri 12 Aug 2016 12:45:28 AM GYT
  *
  * (c) 2015-2016 Juan Carlos Maureira
  */
@@ -27,15 +27,6 @@
 
 class DistributedLock : public ActionListener, public Debug {
     private:
-        CommHandler* ch;
-        unsigned int id;
-
-        unsigned long int beacon_time   = 100; // ms 
-        unsigned int      sense_beacons = 3;
-        unsigned int      backoff_time  = 500; // ms
-
-        unsigned int      retry_max     = 0; // undefined
-
         class Resource : public Thread, public Observable {
             public:
                 enum State {
@@ -44,6 +35,20 @@ class DistributedLock : public ActionListener, public Debug {
                     ADQUIRED      = 2,
                     RELEASED      = 3,
                 };
+
+                struct Member {
+                    unsigned int id;
+                    std::chrono::system_clock::time_point tp;
+                    unsigned int count;
+                    State state;
+                    Member(unsigned int _id) : id(_id) {
+                        this->count = 0;
+                        this->tp = std::chrono::system_clock::now();
+                        this->state = IDLE;
+                    }
+                };
+
+                typedef std::map<unsigned int,Member*> MemberList;
             private:
                 DistributedLock*           parent;
                 std::atomic<bool>          running;
@@ -58,6 +63,12 @@ class DistributedLock : public ActionListener, public Debug {
 
                 std::chrono::system_clock::time_point tp;
 
+                MemberList                 members;
+
+                Member* getMember(unsigned int id);
+                Member* addMember(unsigned int id);
+                bool removeMember(unsigned int id);
+
             public:
 
                 Resource(DistributedLock* p, std::string name) : Thread() {
@@ -67,6 +78,8 @@ class DistributedLock : public ActionListener, public Debug {
                     this->state      = IDLE;
                     this->owner      = p->id;
                     this->count      = 1;
+
+                    this->tp         = std::chrono::system_clock::now();
                 }
                 ~Resource() {
                     this->stop();
@@ -87,7 +100,28 @@ class DistributedLock : public ActionListener, public Debug {
                     this->state = s;
                 }
 
+                void updateMember(unsigned int id, State state, unsigned int count);
+
+                friend std::ostream& operator << (std::ostream& os, Resource& obj) {
+                    os << obj.name << ", " << obj.state << ", " << obj.members.size() << "[";
+                    for(auto it=obj.members.begin();it!=obj.members.end();it++) {
+                        Member* m = (*it).second;
+                        os << m->id << ", " << m->state << ", " << m->count << ", " ;
+                    }
+                    os << "]";
+                    return os;
+                }
         };
+
+    private:
+        CommHandler* ch;
+        unsigned int id;
+
+        unsigned long int beacon_time   = 100; // ms 
+        unsigned int      sense_beacons = 3;
+        unsigned int      backoff_time  = 500; // ms
+
+        unsigned int      retry_max     = 0; // undefined
 
         typedef std::map<std::string, Resource*> ResourceMap;
 
