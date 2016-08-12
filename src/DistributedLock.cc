@@ -4,7 +4,9 @@
  *
  * Author        : Juan Carlos Maureira
  * Created       : Wed 09 Dec 2015 04:09:39 PM CLT
- * Last Modified : Thu 11 Aug 2016 09:57:36 PM GYT
+ * Last Modified : Thu 11 Aug 2016 10:00:53 PM GYT
+ *
+ * (c) 2015-2016 Juan Carlos Maureira
  */
 #include "DistributedLock.h"
 #include "DLPacket.h"

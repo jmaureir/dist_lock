@@ -4,9 +4,9 @@
  *
  * Author        : Juan Carlos Maureira
  * Created       : Wed 09 Dec 2015 04:07:14 PM CLT
- * Last Modified : Thu 11 Aug 2016 09:57:27 PM GYT
+ * Last Modified : Thu 11 Aug 2016 10:26:24 PM GYT
  *
- * (c) 2015 Juan Carlos Maureira
+ * (c) 2015-2016 Juan Carlos Maureira
  */
 #ifndef __DISTRIBUTEDLOCK__
 #define __DISTRIBUTEDLOCK__
@@ -51,6 +51,8 @@ class DistributedLock : public ActionListener, public Debug {
                 std::mutex                 cv_m;
                 std::atomic<unsigned int>  owner;
                 std::atomic<State>         state; 
+
+                std::atomic<unsigned int>  count;
 
                 std::chrono::system_clock::time_point tp;
 
@@ -119,8 +121,10 @@ class DistributedLock : public ActionListener, public Debug {
 
         ~DistributedLock() {
 
-            //TODO:change this for releasing each resource registered 
-            this->release_lock("changer");
+            for(auto it=this->resources.begin();it!=this->resources.end();it++) {
+                std::string res = (*it).first;
+                this->release_lock(res);
+            }
 
             delete(this->ch);
         }
@@ -128,8 +132,6 @@ class DistributedLock : public ActionListener, public Debug {
         bool adquire(std::string resource);
         bool release();
         bool defineResource(std::string resource);
-
-        void setPort(unsigned int p);
 
         virtual void actionPerformed(ActionEvent* evt);
 
