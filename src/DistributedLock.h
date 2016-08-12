@@ -4,7 +4,7 @@
  *
  * Author        : Juan Carlos Maureira
  * Created       : Wed 09 Dec 2015 04:07:14 PM CLT
- * Last Modified : Thu 11 Aug 2016 10:47:25 PM GYT
+ * Last Modified : Thu 11 Aug 2016 11:07:03 PM GYT
  *
  * (c) 2015-2016 Juan Carlos Maureira
  */
@@ -99,7 +99,7 @@ class DistributedLock : public ActionListener, public Debug {
         Resource* createResource(std::string res);
         void removeResource(std::string res);
 
-        bool require_lock(std::string res);
+        bool adquire_lock(std::string res);
         void release_lock(std::string res);
         void query_lock(std::string res);
 
@@ -133,7 +133,9 @@ class DistributedLock : public ActionListener, public Debug {
         }
 
         bool adquire(std::string resource);
-        bool release();
+        bool release(std::string resource);
+        bool releaseAll();
+
         bool defineResource(std::string resource,unsigned int count);
 
         virtual void actionPerformed(ActionEvent* evt);

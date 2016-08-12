@@ -4,8 +4,8 @@
  *
  * Author        : Juan Carlos Maureira
  * Created       : Wed 09 Dec 2015 04:09:39 PM CLT
- * Last Modified : Thu 11 Aug 2016 10:46:00 PM GYT
- * Last Modified : Thu 11 Aug 2016 10:46:00 PM GYT
+ * Last Modified : Thu 11 Aug 2016 11:07:22 PM GYT
+ * Last Modified : Thu 11 Aug 2016 11:07:22 PM GYT
  *
  * (c) 2015-2016 Juan Carlos Maureira
  */
@@ -53,41 +53,29 @@ bool DistributedLock::defineResource(std::string res, unsigned int count=1) {
 }
 
 bool DistributedLock::adquire(std::string res) {
-    std::mt19937 rng;
-    rng.seed(std::random_device()());
-    std::uniform_real_distribution<> dist(0,1);
-
-    while(true) {
-
-        unsigned long int wait_time = this->beacon_time * (this->sense_beacons * (1+dist(rng)));  
-        //std::cout << this->id << " trying to adquire " << res << " " << wait_time <<std::endl;
-
-        if (!this->ch->waitForPacket(wait_time)) {
-            // no packet arrive for 1000 ms
-            Resource* resource = this->createResource(res);
-            resource->setState(Resource::ADQUIRING);
-            resource->start(); 
-
-            // adquiring time for collision detection
-            auto adquiring_time = std::chrono::milliseconds(  this->beacon_time  * this->sense_beacons );
-            std::unique_lock<std::mutex> lk(cv_m);
-            if (cv.wait_for(lk, adquiring_time) == std::cv_status::timeout) {
-                resource->setState(Resource::ADQUIRED);
-                return true;
-            }
-            this->removeResource(res);
-            std::cout << "*** Colision Detected!!! Forcing Backoff" << std::endl;
-        }
-        
-        unsigned long int backoff_time = (this->beacon_time * 2 * this->sense_beacons) * (1+dist(rng)) ;
-        //std::cout << this->id << " failed attempt to adquire " << res << " backoff " << backoff_time << std::endl;
-        std::this_thread::sleep_for(std::chrono::milliseconds(backoff_time));
-    }
-    return false;
+    return this->adquire_lock(res);
 }
 
-bool DistributedLock::release() {
+bool DistributedLock::release(std::string res) {
+    try {
+        this->release_lock(res);
+    } catch(Exception& e) {
+        return false;
+    }
     return true;
+}
+
+bool DistributedLock::releaseAll() {
+    bool r = true;
+    for(auto it=this->resources.begin();it!=this->resources.end();it++) {
+        std::string res = (*it).first;
+        try {
+            this->release_lock(res);
+        } catch(Exception& e) {
+            r = false;
+        }
+    }
+    return r;
 }
 
 unsigned int DistributedLock::getRandomId() {
@@ -132,7 +120,11 @@ DistributedLock::Resource* DistributedLock::createResource(std::string res) {
 void DistributedLock::release_lock(std::string res) {
     Resource* resource = this->getResource(res);
     if (resource != NULL) {
-        resource->stop();
+        try {
+            resource->stop();
+        } catch(Exception& e) {
+            throw(e);
+        }
     }
 }
 
@@ -140,7 +132,37 @@ void DistributedLock::query_lock(std::string res) {
 
 }
 
-bool DistributedLock::require_lock(std::string res) {
+bool DistributedLock::adquire_lock(std::string res) {
+    std::mt19937 rng;
+    rng.seed(std::random_device()());
+    std::uniform_real_distribution<> dist(0,1);
+
+    while(true) {
+
+        unsigned long int wait_time = this->beacon_time * (this->sense_beacons * (1+dist(rng)));  
+        //std::cout << this->id << " trying to adquire " << res << " " << wait_time <<std::endl;
+
+        if (!this->ch->waitForPacket(wait_time)) {
+            // no packet arrive for 1000 ms
+            Resource* resource = this->createResource(res);
+            resource->setState(Resource::ADQUIRING);
+            resource->start(); 
+
+            // adquiring time for collision detection
+            auto adquiring_time = std::chrono::milliseconds(  this->beacon_time  * this->sense_beacons );
+            std::unique_lock<std::mutex> lk(cv_m);
+            if (cv.wait_for(lk, adquiring_time) == std::cv_status::timeout) {
+                resource->setState(Resource::ADQUIRED);
+                return true;
+            }
+            this->removeResource(res);
+            std::cout << "*** Colision Detected!!! Forcing Backoff" << std::endl;
+        }
+        
+        unsigned long int backoff_time = (this->beacon_time * 2 * this->sense_beacons) * (1+dist(rng)) ;
+        //std::cout << this->id << " failed attempt to adquire " << res << " backoff " << backoff_time << std::endl;
+        std::this_thread::sleep_for(std::chrono::milliseconds(backoff_time));
+    }
 
     return false;
 }
