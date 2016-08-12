@@ -4,8 +4,8 @@
  *
  * Author        : Juan Carlos Maureira
  * Created       : Wed 09 Dec 2015 04:09:39 PM CLT
- * Last Modified : Thu 11 Aug 2016 11:22:30 PM GYT
- * Last Modified : Thu 11 Aug 2016 11:22:30 PM GYT
+ * Last Modified : Thu 11 Aug 2016 11:39:35 PM GYT
+ * Last Modified : Thu 11 Aug 2016 11:39:35 PM GYT
  *
  * (c) 2015-2016 Juan Carlos Maureira
  */
@@ -43,6 +43,10 @@ void DistributedLock::Resource::stop() {
 unsigned int DistributedLock::getId() {
     return this->id;
 } 
+
+void DistributedLock::setAdquireMaxRetry(unsigned int n) {
+    this->retry_max = n;
+}
 
 bool DistributedLock::defineResource(std::string res, unsigned int count=1) {
     DistributedLock::Resource* resource = this->createResource(res);
@@ -138,7 +142,9 @@ bool DistributedLock::adquire_lock(std::string res) {
     rng.seed(std::random_device()());
     std::uniform_real_distribution<> dist(0,1);
 
-    while(true) {
+    unsigned int retry = 0;
+
+    while((this->retry_max == 0) || retry < this->retry_max) {
 
         unsigned long int wait_time = this->beacon_time * (this->sense_beacons * (1+dist(rng)));  
         //std::cout << this->id << " trying to adquire " << res << " " << wait_time <<std::endl;
@@ -163,7 +169,11 @@ bool DistributedLock::adquire_lock(std::string res) {
         unsigned long int backoff_time = (this->beacon_time * 2 * this->sense_beacons) * (1+dist(rng)) ;
         //std::cout << this->id << " failed attempt to adquire " << res << " backoff " << backoff_time << std::endl;
         std::this_thread::sleep_for(std::chrono::milliseconds(backoff_time));
+
+        retry++;
     }
+
+    //std::cout << "not adquired" << std::endl;
 
     return false;
 }

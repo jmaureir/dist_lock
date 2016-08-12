@@ -3,7 +3,7 @@
  *
  * Author        : Juan Carlos Maureira
  * Created       : Wed 09 Dec 2015 03:12:59 PM CLT
- * Last Modified : Thu 11 Aug 2016 11:11:01 PM GYT
+ * Last Modified : Thu 11 Aug 2016 11:40:06 PM GYT
  *
  * (c) 2015-2016 Juan Carlos Maureira
  */
@@ -37,8 +37,8 @@ int main(int argc, char **argv) {
     }
 
     int status = 0;
-
-    while ((c = getopt (argc, argv, "r:")) != -1) {
+    
+    while ((c = getopt (argc, argv, "r:n:")) != -1) {
         switch (c) {
             case 'r':
                 if (optarg!=NULL && strlen(optarg) > 0 ) {
@@ -64,13 +64,16 @@ int main(int argc, char **argv) {
                     return usage();
                 }
                 break;
-
+            case 'n':
+                if (optarg!=NULL && strlen(optarg) > 0 ) {
+                    int retry_num = atoi(optarg);
+                    dl->setAdquireMaxRetry(retry_num);
+                }
+                break;
             default:
                 return usage();
         }
     }
-
-    exit(1);
 
     // check resource name is provided
     if (resource == "") {
@@ -117,10 +120,13 @@ int main(int argc, char **argv) {
             }
             return EXIT_FAILURE;
         }
+    } else {
+        std::cerr << "Resource not adquired." << std::endl;
+        return 5;
     }
 
-    if (dl->releaseAll()) {
-        std::cout << "resource released" << std::endl;
+    if (!dl->releaseAll()) {
+        std::cerr << "resource not released" << std::endl;
     }
 
     delete(dl);

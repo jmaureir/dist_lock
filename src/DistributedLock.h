@@ -4,7 +4,7 @@
  *
  * Author        : Juan Carlos Maureira
  * Created       : Wed 09 Dec 2015 04:07:14 PM CLT
- * Last Modified : Thu 11 Aug 2016 11:20:41 PM GYT
+ * Last Modified : Thu 11 Aug 2016 11:35:55 PM GYT
  *
  * (c) 2015-2016 Juan Carlos Maureira
  */
@@ -33,6 +33,8 @@ class DistributedLock : public ActionListener, public Debug {
         unsigned long int beacon_time   = 100; // ms 
         unsigned int      sense_beacons = 3;
         unsigned int      backoff_time  = 500; // ms
+
+        unsigned int      retry_max     = 0; // undefined
 
         class Resource : public Thread, public Observable {
             public:
@@ -137,6 +139,8 @@ class DistributedLock : public ActionListener, public Debug {
         bool releaseAll();
 
         bool defineResource(std::string resource,unsigned int count);
+    
+        void setAdquireMaxRetry(unsigned int n);
 
         virtual void actionPerformed(ActionEvent* evt);
 
