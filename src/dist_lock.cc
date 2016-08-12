@@ -3,7 +3,7 @@
  *
  * Author        : Juan Carlos Maureira
  * Created       : Wed 09 Dec 2015 03:12:59 PM CLT
- * Last Modified : Fri 12 Aug 2016 09:52:52 AM GYT
+ * Last Modified : Fri 12 Aug 2016 10:10:46 AM GYT
  *
  * (c) 2015-2016 Juan Carlos Maureira
  */
@@ -12,6 +12,7 @@
 #include <string>
 #include <sstream>
 #include <sys/wait.h>
+#include <map>
 
 #include "CommHandler.h"
 #include "DistributedLock.h"
@@ -27,18 +28,11 @@ int main(int argc, char **argv) {
     std::string resource;
     int c;
 
-   DistributedLock* dl = NULL;
-
-    try {
-        dl = new DistributedLock();
-    } catch(Exception& e) {
-        std::cerr << "DistributedLock initialization error" << std::endl;
-        return 3;
-    }
-
     int status = 0;
-    int port = 5000;
-    
+    unsigned int port = 5000;
+    unsigned int retry_num = 0;   
+    std::map<std::string,unsigned int> res_map;
+ 
     while ((c = getopt (argc, argv, "r:n:p:")) != -1) {
         switch (c) {
             case 'r':
@@ -54,11 +48,7 @@ int main(int argc, char **argv) {
                             std::cerr << "resource counter must be an integer greater than 0" << std::endl;
                             exit(1);
                         }
-                    }
-
-                    if (!dl->defineResource(resource,count)) {
-                        std::cerr << "error defininf resource " << resource << std::endl;
-                        return 4;
+                        res_map[resource] = count;
                     }
 
                 } else {
@@ -67,13 +57,39 @@ int main(int argc, char **argv) {
                 break;
             case 'n':
                 if (optarg!=NULL && strlen(optarg) > 0 ) {
-                    int retry_num = atoi(optarg);
-                    dl->setAdquireMaxRetry(retry_num);
+                    retry_num = atoi(optarg);
                 }
                 break;
+            case 'p':
+                if (optarg!=NULL && strlen(optarg) > 0 ) {
+                    port = atoi(optarg);
+                }
+                break;
+
             default:
                 return usage();
         }
+    }
+
+    DistributedLock* dl = NULL;
+
+    try {
+        dl = new DistributedLock(0,port);
+
+        dl->setAdquireMaxRetry(retry_num);
+
+        for(auto it=res_map.begin();it!=res_map.end();it++) {
+            std::string resource = (*it).first;
+            unsigned int count  = (*it).second;
+            if (!dl->defineResource(resource,count)) {
+                std::cerr << "error defininf resource " << resource << std::endl;
+                return 4;
+            }
+        }
+
+    } catch(Exception& e) {
+        std::cerr << "DistributedLock initialization error" << std::endl;
+        return 3;
     }
 
     // check resource name is provided

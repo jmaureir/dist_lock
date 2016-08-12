@@ -4,7 +4,7 @@
  *
  * Author        : Juan Carlos Maureira
  * Created       : Wed 09 Dec 2015 04:07:14 PM CLT
- * Last Modified : Fri 12 Aug 2016 12:45:28 AM GYT
+ * Last Modified : Fri 12 Aug 2016 10:01:14 AM GYT
  *
  * (c) 2015-2016 Juan Carlos Maureira
  */
@@ -122,6 +122,7 @@ class DistributedLock : public ActionListener, public Debug {
         unsigned int      backoff_time  = 500; // ms
 
         unsigned int      retry_max     = 0; // undefined
+        unsigned int      port          = 5000;
 
         typedef std::map<std::string, Resource*> ResourceMap;
 
@@ -175,6 +176,7 @@ class DistributedLock : public ActionListener, public Debug {
         bool defineResource(std::string resource,unsigned int count);
     
         void setAdquireMaxRetry(unsigned int n);
+        void setPort(unsigned int port);
 
         virtual void actionPerformed(ActionEvent* evt);
 
