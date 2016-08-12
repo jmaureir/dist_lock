@@ -1,7 +1,9 @@
 Distributed Lock
 Version 1.0
 
-2015 (c) Juan Carlos Maureira
+2015-2016 (c) Juan Carlos Maureira
+2015      (c) Andrew Hart
+
 Center for Mathematical Modeling
 University of Chile
 

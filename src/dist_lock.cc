@@ -3,7 +3,7 @@
  *
  * Author        : Juan Carlos Maureira
  * Created       : Wed 09 Dec 2015 03:12:59 PM CLT
- * Last Modified : Fri 12 Aug 2016 12:28:35 AM GYT
+ * Last Modified : Fri 12 Aug 2016 09:52:52 AM GYT
  *
  * (c) 2015-2016 Juan Carlos Maureira
  */
@@ -18,7 +18,7 @@
 #include "StringTokenizer.h"
 
 int usage() {
-    std::cerr << "usage: dist_lock -r {resource_name} -- command_to_execute " <<  std::endl;   
+    std::cerr << "usage: dist_lock -r {resource_name:[port]} -n {retry_max} -p {port} -- command_to_execute " <<  std::endl;   
     return 1;
 }
 
@@ -37,8 +37,9 @@ int main(int argc, char **argv) {
     }
 
     int status = 0;
+    int port = 5000;
     
-    while ((c = getopt (argc, argv, "r:n:")) != -1) {
+    while ((c = getopt (argc, argv, "r:n:p:")) != -1) {
         switch (c) {
             case 'r':
                 if (optarg!=NULL && strlen(optarg) > 0 ) {
