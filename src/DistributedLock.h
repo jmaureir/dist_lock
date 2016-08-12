@@ -4,7 +4,7 @@
  *
  * Author        : Juan Carlos Maureira
  * Created       : Wed 09 Dec 2015 04:07:14 PM CLT
- * Last Modified : Thu 17 Dec 2015 03:51:54 PM CLT
+ * Last Modified : Thu 11 Aug 2016 09:57:27 PM GYT
  *
  * (c) 2015 Juan Carlos Maureira
  */
@@ -37,7 +37,7 @@ class DistributedLock : public ActionListener, public Debug {
         class Resource : public Thread, public Observable {
             public:
                 enum State {
-                    UNKNOWN       = 0,
+                    IDLE          = 0,
                     ADQUIRING     = 1,
                     ADQUIRED      = 2,
                     RELEASED      = 3,
@@ -55,11 +55,12 @@ class DistributedLock : public ActionListener, public Debug {
                 std::chrono::system_clock::time_point tp;
 
             public:
+
                 Resource(DistributedLock* p, std::string name) : Thread() {
                     this->name       = name;
                     this->parent     = p;
                     this->running    = true;
-                    this->state      = UNKNOWN;
+                    this->state      = IDLE;
                     this->owner      = p->id;
 
                 }
@@ -88,7 +89,6 @@ class DistributedLock : public ActionListener, public Debug {
         std::condition_variable    cv;
         std::mutex                 cv_m;
 
-
         Resource* getResource(std::string res);
         Resource* createResource(std::string res);
         void removeResource(std::string res);
@@ -102,9 +102,9 @@ class DistributedLock : public ActionListener, public Debug {
         unsigned int getId();
 
     public:
-        DistributedLock(unsigned int id=0) {
+        DistributedLock(unsigned int id=0, unsigned int port=5000) {
             try {
-                this->ch = new CommHandler(5000);
+                this->ch = new CommHandler(port);
             } catch (Exception& e) {
                 throw(e);
             }
@@ -119,6 +119,7 @@ class DistributedLock : public ActionListener, public Debug {
 
         ~DistributedLock() {
 
+            //TODO:change this for releasing each resource registered 
             this->release_lock("changer");
 
             delete(this->ch);
@@ -126,6 +127,9 @@ class DistributedLock : public ActionListener, public Debug {
 
         bool adquire(std::string resource);
         bool release();
+        bool defineResource(std::string resource);
+
+        void setPort(unsigned int p);
 
         virtual void actionPerformed(ActionEvent* evt);
 

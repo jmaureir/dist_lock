@@ -4,12 +4,13 @@
  *
  * Author        : Juan Carlos Maureira
  * Created       : Wed 09 Dec 2015 04:09:39 PM CLT
- * Last Modified : Thu 17 Dec 2015 03:38:19 PM CLT
+ * Last Modified : Thu 11 Aug 2016 09:57:36 PM GYT
  */
 #include "DistributedLock.h"
 #include "DLPacket.h"
 #include <thread>
 
+/* Resource Implementation */
 void DistributedLock::Resource::run() {
     std::unique_lock<std::mutex> lk(cv_m);
 
@@ -33,9 +34,16 @@ void DistributedLock::Resource::stop() {
     cv.notify_all();
 }
 
+/* Distributed Lock implementation */
+
 unsigned int DistributedLock::getId() {
     return this->id;
 } 
+
+bool DistributedLock::defineResource(std::string res) {
+    DistributedLock::Resource* resource = this->createResource(res);
+    return resource != NULL;
+}
 
 bool DistributedLock::adquire(std::string res) {
     std::mt19937 rng;

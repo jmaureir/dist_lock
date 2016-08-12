@@ -3,9 +3,9 @@
  *
  * Author        : Juan Carlos Maureira
  * Created       : Wed 09 Dec 2015 03:12:59 PM CLT
- * Last Modified : Thu 17 Dec 2015 03:43:20 PM CLT
+ * Last Modified : Thu 11 Aug 2016 09:46:25 PM GYT
  *
- * (c) 2015 Juan Carlos Maureira
+ * (c) 2015-2016 Juan Carlos Maureira
  */
 
 #include <iostream>
@@ -26,11 +26,28 @@ int main(int argc, char **argv) {
     std::string resource;
     int c;
 
+   DistributedLock* dl = NULL;
+
+    try {
+        dl = new DistributedLock();
+    } catch(Exception& e) {
+        std::cerr << "DistributedLock initialization error" << std::endl;
+        return 3;
+    }
+
+    int status = 0;
+
     while ((c = getopt (argc, argv, "r:")) != -1) {
         switch (c) {
             case 'r':
                 if (optarg!=NULL && strlen(optarg) > 0 ) {
                     resource = std::string(optarg);
+
+                    if (!dl->defineResource(resource)) {
+                        std::cerr << "error defininf resource " << resource << std::endl;
+                        return 4;
+                    }
+
                 } else {
                     return usage();
                 }
@@ -40,6 +57,8 @@ int main(int argc, char **argv) {
                 return usage();
         }
     }
+
+    exit(1);
 
     // check resource name is provided
     if (resource == "") {
@@ -63,16 +82,7 @@ int main(int argc, char **argv) {
         return usage();
     }
 
-    DistributedLock* dl = NULL;
-
-    try {
-        dl = new DistributedLock();
-    } catch(Exception& e) {
-        std::cerr << "DistributedLock error" << std::endl;
-        return 3;
-    }
-    int status = 0;
-
+ 
     if (dl->adquire(resource)) {
         std::cout << "resource adquired!" << std::endl;
         std::cout << "executing: " << cmd.str() << std::endl;
