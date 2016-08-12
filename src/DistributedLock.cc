@@ -4,8 +4,8 @@
  *
  * Author        : Juan Carlos Maureira
  * Created       : Wed 09 Dec 2015 04:09:39 PM CLT
- * Last Modified : Thu 11 Aug 2016 11:07:22 PM GYT
- * Last Modified : Thu 11 Aug 2016 11:07:22 PM GYT
+ * Last Modified : Thu 11 Aug 2016 11:10:53 PM GYT
+ * Last Modified : Thu 11 Aug 2016 11:10:53 PM GYT
  *
  * (c) 2015-2016 Juan Carlos Maureira
  */
@@ -129,7 +129,7 @@ void DistributedLock::release_lock(std::string res) {
 }
 
 void DistributedLock::query_lock(std::string res) {
-
+    // TODO: to be implemented
 }
 
 bool DistributedLock::adquire_lock(std::string res) {

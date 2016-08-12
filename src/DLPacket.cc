@@ -5,6 +5,7 @@ DLPacket::DLPacket(UDPDatagram* dgram) : UDPDatagram(dgram) {
 
     *this >> this->state;
     *this >> this->member_id;
+    *this >> this->count;
     *this >> this->options;
 
     std::stringstream res("");
@@ -35,8 +36,16 @@ std::string DLPacket::getResource() {
     return this->resource;
 }
 
+unsigned int DLPacket::getCount() {
+    return this->count;
+}
+
 void DLPacket::setResource(std::string res) {
     this->resource = res;
+}
+
+void DLPacket::setCount(unsigned int c) {
+    this->count = c;
 }
 
 bool DLPacket::hasOption(DLPacket::Option opt) {
@@ -58,6 +67,7 @@ void DLPacket::build() {
 
 	*this << this->state;
     *this << this->member_id;
+    *this << this->count;
     *this << this->options;
     for(int i=0;i < (this->resource.length() > RES_BUFF ? RES_BUFF : this->resource.length()+1);i++) {
         *this << (unsigned char)this->resource[i];

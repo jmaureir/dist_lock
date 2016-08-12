@@ -20,14 +20,16 @@ class DLPacket : public UDPDatagram {
 		unsigned char     state;
         unsigned int      member_id;
         unsigned char     options;
+        unsigned int      count;
         std::string       resource;
 
 	public:
 
 		DLPacket(unsigned char s,unsigned int id) : UDPDatagram() {
-			this->state = s;
+			this->state     = s;
             this->member_id = id;
-            this->options = 0;
+            this->options   = 0;
+            this->count     =1;
 		}
 
 		DLPacket(const DLPacket& p) {
@@ -35,6 +37,7 @@ class DLPacket : public UDPDatagram {
             this->member_id = p.member_id;
             this->options   = p.options;
             this->resource  = p.resource;
+            this->count     = p.count;
 			this->src       = p.src;
 			this->dst       = p.dst;
 			this->s_port    = p.s_port;
@@ -48,10 +51,12 @@ class DLPacket : public UDPDatagram {
 		unsigned char getState();
         unsigned int getMemberId();
         std::string getResource();
+        unsigned int getCount();
 
         bool hasOption(Option opt);
         void setOption(Option opt);
         void setResource(std::string res);
+        void setCount(unsigned int c);
 
 		virtual void build();
 };
