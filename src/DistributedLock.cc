@@ -4,8 +4,8 @@
  *
  * Author        : Juan Carlos Maureira
  * Created       : Wed 09 Dec 2015 04:09:39 PM CLT
- * Last Modified : Fri 12 Aug 2016 10:12:55 AM GYT
- * Last Modified : Fri 12 Aug 2016 10:12:55 AM GYT
+ * Last Modified : Fri 12 Aug 2016 10:13:45 AM GYT
+ * Last Modified : Fri 12 Aug 2016 10:13:45 AM GYT
  *
  * (c) 2015-2016 Juan Carlos Maureira
  * (c) 2016      Andrew Hart
@@ -82,10 +82,6 @@ bool DistributedLock::Resource::removeMember(unsigned int id) {
 unsigned int DistributedLock::getId() {
     return this->id;
 } 
-
-void DistributedLock::setPort(unsigned int port) {
-    this->port = port;
-}
 
 void DistributedLock::setAdquireMaxRetry(unsigned int n) {
     this->retry_max = n;
