@@ -4,7 +4,7 @@
  *
  * Author        : Juan Carlos Maureira
  * Created       : Wed 09 Dec 2015 04:07:14 PM CLT
- * Last Modified : Thu 11 Aug 2016 10:43:20 PM GYT
+ * Last Modified : Thu 11 Aug 2016 10:46:13 PM GYT
  *
  * (c) 2015-2016 Juan Carlos Maureira
  */
@@ -125,6 +125,11 @@ class DistributedLock : public ActionListener, public Debug {
 
         ~DistributedLock() {
 
+<<<<<<< HEAD
+=======
+            std::cout << "releasing resources" << std::endl;
+
+>>>>>>> 436228823677d852129c7e50083ff855063b38a2
             for(auto it=this->resources.begin();it!=this->resources.end();it++) {
                 std::string res = (*it).first;
                 this->release_lock(res);
