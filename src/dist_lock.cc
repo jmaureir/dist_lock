@@ -3,7 +3,7 @@
  *
  * Author        : Juan Carlos Maureira
  * Created       : Wed 09 Dec 2015 03:12:59 PM CLT
- * Last Modified : Thu 11 Aug 2016 10:25:15 PM GYT
+ * Last Modified : Thu 11 Aug 2016 10:41:32 PM GYT
  *
  * (c) 2015-2016 Juan Carlos Maureira
  */
@@ -15,6 +15,7 @@
 
 #include "CommHandler.h"
 #include "DistributedLock.h"
+#include "StringTokenizer.h"
 
 int usage() {
     std::cerr << "usage: dist_lock -r {resource_name} -- command_to_execute " <<  std::endl;   
@@ -43,7 +44,18 @@ int main(int argc, char **argv) {
                 if (optarg!=NULL && strlen(optarg) > 0 ) {
                     resource = std::string(optarg);
 
-                    if (!dl->defineResource(resource)) {
+                    int count = 1;
+                    if (resource.find(':') != std::string::npos) {
+                        StringTokenizer st(resource,":");
+                        std::string r = st.nextToken();
+                        count = st.nextIntToken();
+                        if (count<1) {
+                            std::cerr << "resource counter must be an integer greater than 0" << std::endl;
+                            exit(1);
+                        }
+                    }
+
+                    if (!dl->defineResource(resource,count)) {
                         std::cerr << "error defininf resource " << resource << std::endl;
                         return 4;
                     }

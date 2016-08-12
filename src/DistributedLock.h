@@ -4,7 +4,7 @@
  *
  * Author        : Juan Carlos Maureira
  * Created       : Wed 09 Dec 2015 04:07:14 PM CLT
- * Last Modified : Thu 11 Aug 2016 10:26:24 PM GYT
+ * Last Modified : Thu 11 Aug 2016 10:43:20 PM GYT
  *
  * (c) 2015-2016 Juan Carlos Maureira
  */
@@ -64,7 +64,7 @@ class DistributedLock : public ActionListener, public Debug {
                     this->running    = true;
                     this->state      = IDLE;
                     this->owner      = p->id;
-
+                    this->count      = 1;
                 }
                 ~Resource() {
                     this->stop();
@@ -75,6 +75,10 @@ class DistributedLock : public ActionListener, public Debug {
 
                 State getState() {
                     return this->state;
+                }
+
+                void setCount(unsigned int c) {
+                    this->count = c;
                 }
 
                 void setState(State s) {
@@ -131,7 +135,7 @@ class DistributedLock : public ActionListener, public Debug {
 
         bool adquire(std::string resource);
         bool release();
-        bool defineResource(std::string resource);
+        bool defineResource(std::string resource,unsigned int count);
 
         virtual void actionPerformed(ActionEvent* evt);
 

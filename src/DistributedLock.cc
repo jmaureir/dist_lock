@@ -4,7 +4,7 @@
  *
  * Author        : Juan Carlos Maureira
  * Created       : Wed 09 Dec 2015 04:09:39 PM CLT
- * Last Modified : Thu 11 Aug 2016 10:00:53 PM GYT
+ * Last Modified : Thu 11 Aug 2016 10:43:09 PM GYT
  *
  * (c) 2015-2016 Juan Carlos Maureira
  */
@@ -42,8 +42,12 @@ unsigned int DistributedLock::getId() {
     return this->id;
 } 
 
-bool DistributedLock::defineResource(std::string res) {
+bool DistributedLock::defineResource(std::string res, unsigned int count=1) {
     DistributedLock::Resource* resource = this->createResource(res);
+    if (count>1) {
+        resource->setCount(count);
+    }
+
     return resource != NULL;
 }
 
