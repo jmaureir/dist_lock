@@ -4,8 +4,8 @@
  *
  * Author        : Juan Carlos Maureira
  * Created       : Wed 09 Dec 2015 04:09:39 PM CLT
- * Last Modified : Thu 11 Aug 2016 11:10:53 PM GYT
- * Last Modified : Thu 11 Aug 2016 11:10:53 PM GYT
+ * Last Modified : Thu 11 Aug 2016 11:22:30 PM GYT
+ * Last Modified : Thu 11 Aug 2016 11:22:30 PM GYT
  *
  * (c) 2015-2016 Juan Carlos Maureira
  */
@@ -24,6 +24,7 @@ void DistributedLock::Resource::run() {
         DLPacket* beacon_pkt = new DLPacket(this->state,id);
 
         beacon_pkt->setResource(this->name);
+        beacon_pkt->setCount(this->count);
         this->parent->ch->send(beacon_pkt);
 
         if (cv.wait_for(lk, std::chrono::milliseconds(this->parent->beacon_time)) != std::cv_status::timeout) {
