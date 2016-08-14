@@ -89,11 +89,9 @@ int main(int argc, char **argv) {
  
 // Get executable name
     std::string name(argv[0]);
-std::cout << name << std::endl;
     size_t slashPos = name.rfind('/');
     if (slashPos!=std::string::npos)
         name = name.substr(slashPos+1);
-std::cout << name << std::endl;
     
 // Process command-line arguments
     while ((c = getopt (argc, argv, "hvr:n:p:")) != -1) {
