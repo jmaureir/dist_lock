@@ -3,13 +3,13 @@
  *
  * Author        : Juan Carlos Maureira
  * Created       : Wed 09 Dec 2015 03:12:59 PM CLT
- * Last Modified : Fri 12 Aug 2016 01:11:47 PM GYT
+ * Last Modified : Tue 16 Aug 2016 03:52:58 PM CLT
  *
  * (c) 2015-2016 Juan Carlos Maureira
  * (c) 2016      Andrew Hart
  */
 
-#include <unistd.h> #getopt
+#include <unistd.h> 
 #include <iostream>
 #include <string>
 #include <sstream>
