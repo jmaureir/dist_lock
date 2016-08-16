@@ -1,5 +1,5 @@
 AUTOMAKE_OPTIONS = subdir-objects
-AM_CXXFLAGS= -std=c++11 -DREENTRANT -fext-numeric-literals
+AM_CXXFLAGS= -std=c++11 -O0 -DREENTRANT -fext-numeric-literals
 ACLOCAL_AMFLAGS= ${ACLOCAL_FLAGS} ${AM_CXXFLAGS} -I m4 --install
 AM_CPPFLAGS= -I$(top_srcdir)/src
 

@@ -1,7 +1,7 @@
 /**********************************************************
 * File Name : UDPSocket.cc
 *
-* Last Modified : Tue 16 Aug 2016 12:23:39 AM GYT
+* Last Modified : Tue 16 Aug 2016 03:19:59 PM CLT
 * (c) Juan-Carlos Maureira
 * Center for Mathematical Modeling
 * University of Chile
@@ -223,7 +223,8 @@ UDPDatagram* UDPSocket::receive() {
 			return pkt;	
 		} else if (len < 0) {
 			// timeout 
-			if (errno == EAGAIN || errno == EINTR) {
+			//if (errno == EAGAIN || errno == EINTR) {
+			if (errno != ETIMEDOUT ) {
 				return NULL;
 			}
 		} else {

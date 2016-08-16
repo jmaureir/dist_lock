@@ -4,7 +4,7 @@
  *
  * Author        : Juan Carlos Maureira
  * Created       : Wed 09 Dec 2015 03:13:44 PM CLT
- * Last Modified : Tue 16 Aug 2016 11:31:48 AM CLT
+ * Last Modified : Tue 16 Aug 2016 03:16:20 PM CLT
  *
  * (c) 2015 Juan Carlos Maureira
  */
@@ -54,6 +54,7 @@ class CommHandler : public UDPSocket, public Thread, public Observable {
         } 
 
         ~CommHandler() {
+        
             if (this->running) {
                 this->stop();
             }

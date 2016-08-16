@@ -4,7 +4,7 @@
  *
  * Author        : Juan Carlos Maureira
  * Created       : Wed 09 Dec 2015 04:07:14 PM CLT
- * Last Modified : Tue 16 Aug 2016 11:31:07 AM CLT
+ * Last Modified : Tue 16 Aug 2016 03:37:54 PM CLT
  *
  * (c) 2015-2016 Juan Carlos Maureira
  * (c) 2016      Andrew Hart
@@ -137,6 +137,9 @@ class DistributedLock : public ActionListener {
         };
 
     private:
+
+        static CommHandler* s_ch;
+
         CommHandler* ch;
         unsigned int id;
 
@@ -158,6 +161,9 @@ class DistributedLock : public ActionListener {
         std::condition_variable    cv;
         std::mutex                 cv_m;
 
+        std::condition_variable    backoff_cv;
+        std::mutex                 backoff_m;
+
         Resource* getResource(std::string res);
         Resource* createResource(std::string res);
         void removeResource(std::string res);
@@ -170,12 +176,14 @@ class DistributedLock : public ActionListener {
 
         unsigned int getId();
 
+        static CommHandler* getCommHandlerInstance(unsigned int port);
+
         bool listenForPacket(unsigned long int wt);
 
     public:
         DistributedLock(unsigned int id=0, unsigned int port=5000) {
             try {
-                this->ch = new CommHandler(port);
+                this->ch = getCommHandlerInstance(port);
             } catch (Exception& e) {
                 throw(e);
             }

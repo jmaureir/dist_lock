@@ -4,8 +4,8 @@
  *
  * Author        : Juan Carlos Maureira
  * Created       : Wed 09 Dec 2015 04:09:39 PM CLT
- * Last Modified : Tue 16 Aug 2016 11:33:00 AM CLT
- * Last Modified : Tue 16 Aug 2016 11:33:00 AM CLT
+ * Last Modified : Tue 16 Aug 2016 03:39:41 PM CLT
+ * Last Modified : Tue 16 Aug 2016 03:39:41 PM CLT
  *
  * (c) 2015-2016 Juan Carlos Maureira
  * (c) 2016      Andrew Hart
@@ -15,7 +15,16 @@
 
 #include <thread>
 
-RegisterDebugClass(DistributedLock,NONE)
+RegisterDebugClass(DistributedLock,ALL)
+
+CommHandler* DistributedLock::s_ch = NULL;
+
+CommHandler* DistributedLock::getCommHandlerInstance(unsigned int port) {
+    if (DistributedLock::s_ch == NULL) {
+        DistributedLock::s_ch = new CommHandler(port);
+    }
+    return DistributedLock::s_ch;
+}
 
 /* Resource Implementation */
 void DistributedLock::Resource::run() {
@@ -28,19 +37,20 @@ void DistributedLock::Resource::run() {
         if (this->state == IDLE) {
             std::unique_lock<std::mutex> lock(beacon_m);
             this->beacon_cv.wait(lock);
-            continue;
+        } else {
+
+            DLPacket* beacon_pkt = new DLPacket(this->state,id);
+
+            beacon_pkt->setResource(this->name);
+            beacon_pkt->setCount(this->count);
+            this->parent->ch->send(beacon_pkt);
+
         }
-
-        DLPacket* beacon_pkt = new DLPacket(this->state,id);
-
-        beacon_pkt->setResource(this->name);
-        beacon_pkt->setCount(this->count);
-        this->parent->ch->send(beacon_pkt);
-
         if (cv.wait_for(lk, std::chrono::milliseconds(this->parent->beacon_time)) != std::cv_status::timeout) {
             break;
         }
     }
+
     debug << "Resource thread finished" << std::endl;
 }
 
@@ -62,6 +72,7 @@ void DistributedLock::Resource::updateMember(unsigned int id, State state, unsig
 
 void DistributedLock::Resource::stop() {
     if (this->running) {
+
         this->running=false;
         cv.notify_all();
         try {
@@ -246,7 +257,8 @@ bool DistributedLock::adquire_lock(std::string res) {
     while((this->retry_max == 0) || retry < this->retry_max) {
 
         unsigned long int wait_time = this->beacon_time * (this->sense_beacons * (1+dist(rng)));  
-        //debug << this->id << " trying to adquire " << res << " " << wait_time <<std::endl;
+
+        //debug << this->id << " trying to adquire " << res << " " << wait_time << " " << resource->getState() <<std::endl;
 
         if (!this->listenForPacket(wait_time)) {
 
@@ -272,8 +284,9 @@ bool DistributedLock::adquire_lock(std::string res) {
         }
         unsigned long int backoff_time = (this->beacon_time * 2 * this->sense_beacons) * (1+dist(rng)) ;
         //debug << this->id << " failed attempt to adquire " << res << " backoff " << backoff_time << std::endl;
-        std::this_thread::sleep_for(std::chrono::milliseconds(backoff_time));
-
+        //std::this_thread::sleep_for(std::chrono::milliseconds(backoff_time));
+        std::unique_lock<std::mutex> bk_lk(cv_m);
+        this->backoff_cv.wait_for(bk_lk, std::chrono::milliseconds(backoff_time));
     }
 
     //debug << "not adquired" << std::endl;
@@ -303,15 +316,15 @@ void DistributedLock::actionPerformed(ActionEvent* evt) {
                 std::lock_guard<std::mutex> lock(this->update_m);
                 Resource* resource = this->getResource(res);
                 if (resource != NULL) {
-
                     if (pkt->getState() == Resource::ACQUIRING) {
-                        listen_cv.notify_all();
+                        listen_cv.notify_one();
 
-                        Resource::State state = (Resource::State)pkt->getState();
-                        resource->updateMember(pkt->getMemberId(), state, pkt->getCount());
-
+                        if (resource->getState()!=Resource::IDLE) {
+                            Resource::State state = (Resource::State)pkt->getState();
+                            resource->updateMember(pkt->getMemberId(), state, pkt->getCount());
+                        }
                         if (resource->getState() == Resource::ACQUIRING) {
-                            cv.notify_all();
+                            cv.notify_one();
                         }
                     }
                 }
