@@ -31,8 +31,8 @@ int usage(std::string& name) {
 }
 
 int showVersion(std::string& name) {
-	    std::cerr << name << " 1.0.0" << std::endl;
-	    	return 0;
+    std::cerr << name << " 1.0.0" << std::endl;
+    return 0;
 }
 
 int showHelp(std::string& name) {
@@ -92,7 +92,7 @@ int main(int argc, char **argv) {
     size_t slashPos = name.rfind('/');
     if (slashPos!=std::string::npos)
         name = name.substr(slashPos+1);
-    
+
 // Process command-line arguments
     while ((c = getopt (argc, argv, "hvr:n:p:")) != -1) {
         switch (c) {
