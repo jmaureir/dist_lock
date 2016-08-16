@@ -72,8 +72,10 @@ class Debug {
                 }
 
                 template <typename T> Debug::CoutBase& operator<< (const T& o) {
-                    if (this->log_mask = ALL) {
+                    if (this->log_mask == ALL) {
                         this->enabled = true;
+                    } else if (this->log_mask == NONE) {
+                        this->enabled == false;
                     }
                     if (this->enabled) {
                         if (&o != NULL) {

@@ -4,7 +4,7 @@
  *
  * Author        : Juan Carlos Maureira
  * Created       : Wed 09 Dec 2015 03:13:44 PM CLT
- * Last Modified : Tue 16 Aug 2016 01:07:34 AM GYT
+ * Last Modified : Tue 16 Aug 2016 11:31:48 AM CLT
  *
  * (c) 2015 Juan Carlos Maureira
  */
@@ -49,7 +49,6 @@ class CommHandler : public UDPSocket, public Thread, public Observable {
             this->start();
             this->wait();
 
-            //this->bcast_addr = InetAddress("255.255.255.255");
             this->bcast_addr = InetAddress("127.255.255.255");
 
         } 

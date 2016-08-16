@@ -4,19 +4,18 @@
  *
  * Author        : Juan Carlos Maureira
  * Created       : Wed 09 Dec 2015 04:09:39 PM CLT
- * Last Modified : Tue 16 Aug 2016 01:07:20 AM GYT
- * Last Modified : Tue 16 Aug 2016 01:07:20 AM GYT
+ * Last Modified : Tue 16 Aug 2016 11:33:00 AM CLT
+ * Last Modified : Tue 16 Aug 2016 11:33:00 AM CLT
  *
  * (c) 2015-2016 Juan Carlos Maureira
  * (c) 2016      Andrew Hart
  */
 #include "DistributedLock.h"
 #include "DLPacket.h"
-#include "Debug.h"
 
 #include <thread>
 
-RegisterDebugClass(DistributedLock,ALL)
+RegisterDebugClass(DistributedLock,NONE)
 
 /* Resource Implementation */
 void DistributedLock::Resource::run() {
@@ -25,7 +24,13 @@ void DistributedLock::Resource::run() {
     unsigned int id = this->parent->getId();
 
     while (this->running) {
-        
+
+        if (this->state == IDLE) {
+            std::unique_lock<std::mutex> lock(beacon_m);
+            this->beacon_cv.wait(lock);
+            continue;
+        }
+
         DLPacket* beacon_pkt = new DLPacket(this->state,id);
 
         beacon_pkt->setResource(this->name);
@@ -113,7 +118,7 @@ bool DistributedLock::Resource::isAcquirable() {
 }
 
 void DistributedLock::Resource::reset() {
-    this->state = IDLE;
+    this->setState(IDLE);
     std::lock_guard<std::mutex> lock(this->members_m);
     for(auto it=this->members.begin();it!=this->members.end();) {
         Member* m = (*it).second;

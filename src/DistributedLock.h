@@ -4,7 +4,7 @@
  *
  * Author        : Juan Carlos Maureira
  * Created       : Wed 09 Dec 2015 04:07:14 PM CLT
- * Last Modified : Tue 16 Aug 2016 01:05:00 AM GYT
+ * Last Modified : Tue 16 Aug 2016 11:31:07 AM CLT
  *
  * (c) 2015-2016 Juan Carlos Maureira
  * (c) 2016      Andrew Hart
@@ -14,6 +14,8 @@
 
 #include "ActionListener.h"
 #include "CommHandler.h"
+#include "Debug.h"
+
 
 #include <random>
 #include <climits>
@@ -65,6 +67,9 @@ class DistributedLock : public ActionListener {
                 MemberList                 members;
                 std::mutex                 members_m;
 
+                std::condition_variable    beacon_cv;
+                std::mutex                 beacon_m;
+
                 Member* getMember(unsigned int id);
                 Member* addMember(unsigned int id);
                 bool removeMember(unsigned int id);
@@ -112,6 +117,7 @@ class DistributedLock : public ActionListener {
 
                 void setState(State s) {
                     this->state = s;
+                    this->beacon_cv.notify_all();
                 }
 
                 void reset();
@@ -136,7 +142,6 @@ class DistributedLock : public ActionListener {
 
         unsigned long int beacon_time   = 100; // ms 
         unsigned int      sense_beacons = 3;
-        unsigned int      backoff_time  = 500; // ms
 
         unsigned int      retry_max     = 0; // undefined
 
@@ -199,9 +204,6 @@ class DistributedLock : public ActionListener {
                 }
             }
             delete(this->ch);
-
-            std::cout << "DistLocker done" << std::endl;
-
         }
 
         bool acquire(std::string resource);

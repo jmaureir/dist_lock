@@ -4,7 +4,7 @@
  *
  * Author        : Juan Carlos Maureira
  * Created       : Wed 09 Dec 2015 03:17:29 PM CLT
- * Last Modified : Tue 16 Aug 2016 12:48:32 AM GYT
+ * Last Modified : Tue 16 Aug 2016 11:32:47 AM CLT
  *
  * (c) 2015 Juan Carlos Maureira
  */
@@ -41,7 +41,7 @@ void CommHandler::run() {
 }
 
 void CommHandler::stop() {
-    debug << INFO << "stopping CommHandler" << std::endl;
+    debug << "stopping CommHandler" << std::endl;
     this->running = false;
     this->removeAllActionListeners();
     this->notify();

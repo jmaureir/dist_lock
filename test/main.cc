@@ -4,7 +4,7 @@
  *
  * Author        : Juan Carlos Maureira
  * Created       : Wed 09 Dec 2015 03:12:59 PM CLT
- * Last Modified : Tue 16 Aug 2016 12:58:25 AM GYT
+ * Last Modified : Tue 16 Aug 2016 11:33:32 AM CLT
  *
  * (c) 2015 Juan Carlos Maureira
  */
@@ -77,7 +77,6 @@ int main(int argc, char **argv) {
     for(int i=0;i<max_jobs;i++) {
         std::cout << "joining job " << i << std::endl;
         jobs[i].join();
-        std::cout << "joined job " << i << std::endl;
     }
 }
 
