@@ -1,3 +1,3 @@
 #include "Debug.h"
 
-std::mutex Debug::mtx;
+Debug* Debug::d = NULL;

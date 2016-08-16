@@ -1,7 +1,7 @@
 /**********************************************************
 * File Name : UDPSocket.cc
 *
-* Last Modified : Thu 17 Dec 2015 03:42:44 PM CLT
+* Last Modified : Tue 16 Aug 2016 12:23:39 AM GYT
 * (c) Juan-Carlos Maureira
 * Center for Mathematical Modeling
 * University of Chile
@@ -60,13 +60,13 @@ int UDPSocket::create_socket() {
 		throw SocketErrorException(strerror(errno));
     }
 
-	/*
+    /*
 	int sz = 128 * 50000;
 	if (setsockopt(sockfd, SOL_SOCKET, SO_RCVBUFFORCE, &sz, sizeof(sz)) < 0) {
 		std::cout << "Unable to set event socket SO_RCVBUFFORCE option: " <<  strerror(errno) << std::endl;
-        return;
+		throw SocketErrorException(strerror(errno));
     }
-	*/
+    */
 
 	// enable socket to broadcast messages
 	int bcast_enable = 1;	
@@ -118,6 +118,8 @@ UDPSocket::UDPSocket(unsigned int s_addr, int port) {
 	} catch (Exception& e) {
 		throw(e);
 	}
+
+    std::cout << "saddr " << s_addr << std::endl;
 
 	// prepare the server address to bind the socket
 	bzero((char *) &(this->serveraddr), sizeof(this->serveraddr));

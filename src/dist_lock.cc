@@ -3,7 +3,7 @@
  *
  * Author        : Juan Carlos Maureira
  * Created       : Wed 09 Dec 2015 03:12:59 PM CLT
- * Last Modified : Fri 12 Aug 2016 10:12:27 AM GYT
+ * Last Modified : Fri 12 Aug 2016 01:11:47 PM GYT
  *
  * (c) 2015-2016 Juan Carlos Maureira
  * (c) 2016      Andrew Hart
@@ -115,7 +115,7 @@ int main(int argc, char **argv) {
         return usage();
     }
  
-    if (dl->adquire(resource)) {
+    if (dl->acquire(resource)) {
         std::cout << "resource adquired!" << std::endl;
         std::cout << "executing: " << cmd.str() << std::endl;
         pid_t pid;

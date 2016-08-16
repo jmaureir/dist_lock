@@ -4,12 +4,15 @@
  *
  * Author        : Juan Carlos Maureira
  * Created       : Wed 09 Dec 2015 03:17:29 PM CLT
- * Last Modified : Mon 14 Dec 2015 11:43:42 PM CLT
+ * Last Modified : Tue 16 Aug 2016 12:48:32 AM GYT
  *
  * (c) 2015 Juan Carlos Maureira
  */
 #include "CommHandler.h"
+#include "Debug.h"
 #include <chrono>
+
+RegisterDebugClass(CommHandler,NONE)
 
 void CommHandler::run() {
     this->running = true;
@@ -21,15 +24,34 @@ void CommHandler::run() {
         try {
             pkt = this->receive();
         } catch (Exception& e) {
-            std::cout << e.what() << std::endl;
+            debug << e.what() << std::endl;
         }
         if (pkt != NULL) {
-            this->cv.notify_all(); 
             DLPacket* dl_pkt = new DLPacket(pkt);
-            this->actionPerformed(new PacketArrivedEvent(dl_pkt));
+
+            if (this->running) {
+                this->cv.notify_all(); 
+                this->actionPerformed(new PacketArrivedEvent(dl_pkt));
+            }
             delete(dl_pkt);
             delete(pkt);
         }
+    }
+    debug << "CommHandler finising" << std::endl;
+}
+
+void CommHandler::stop() {
+    debug << INFO << "stopping CommHandler" << std::endl;
+    this->running = false;
+    this->removeAllActionListeners();
+    this->notify();
+    this->cv.notify_all();
+    this->close();
+    try {
+        this->join();
+        debug << "CommHandler Joined" << std::endl;
+    } catch(Exception& e) {
+        debug << "Could not join commhandler." << std::endl;
     }
 }
 

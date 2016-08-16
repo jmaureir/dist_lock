@@ -4,15 +4,19 @@
  *
  * Author        : Juan Carlos Maureira
  * Created       : Wed 09 Dec 2015 04:09:39 PM CLT
- * Last Modified : Fri 12 Aug 2016 10:13:45 AM GYT
- * Last Modified : Fri 12 Aug 2016 10:13:45 AM GYT
+ * Last Modified : Tue 16 Aug 2016 01:07:20 AM GYT
+ * Last Modified : Tue 16 Aug 2016 01:07:20 AM GYT
  *
  * (c) 2015-2016 Juan Carlos Maureira
  * (c) 2016      Andrew Hart
  */
 #include "DistributedLock.h"
 #include "DLPacket.h"
+#include "Debug.h"
+
 #include <thread>
+
+RegisterDebugClass(DistributedLock,ALL)
 
 /* Resource Implementation */
 void DistributedLock::Resource::run() {
@@ -32,25 +36,39 @@ void DistributedLock::Resource::run() {
             break;
         }
     }
+    debug << "Resource thread finished" << std::endl;
 }
 
 void DistributedLock::Resource::updateMember(unsigned int id, State state, unsigned int count) {
-
-    Member* m = this->getMember(id);
-    if (m==NULL) {
-        m = this->addMember(id);
+    if (this->count == count) {
+        // only account the members reporting the same count number
+        Member* m = this->getMember(id);
+        if (m==NULL) {
+            m = this->addMember(id);
+        }
+        {
+            std::lock_guard<std::mutex> lock(this->members_m);
+            m->count = count;
+            m->tp    = std::chrono::system_clock::now();
+            m->state = state;
+        }
     }
-    m->count = count;
-    m->tp    = std::chrono::system_clock::now();
-    m->state = state;
 }
 
 void DistributedLock::Resource::stop() {
-    this->running=false;
-    cv.notify_all();
+    if (this->running) {
+        this->running=false;
+        cv.notify_all();
+        try {
+            this->join();
+        } catch (Exception& e) {
+            std::cerr << "could not join resource thread" << std::endl; 
+        }
+    }
 }
 
 DistributedLock::Resource::Member* DistributedLock::Resource::getMember(unsigned int id) {
+    std::lock_guard<std::mutex> lock(this->members_m);
     if (this->members.find(id)!=this->members.end()) {
         return this->members[id];
     }
@@ -60,6 +78,7 @@ DistributedLock::Resource::Member* DistributedLock::Resource::getMember(unsigned
 DistributedLock::Resource::Member* DistributedLock::Resource::addMember(unsigned int id) {
     Member* member = this->getMember(id);
     if (member == NULL) {
+        std::lock_guard<std::mutex> lock(this->members_m);
         member = new Member(id);
         //TODO use a mutex for changing map
         this->members[id] = member;
@@ -70,11 +89,37 @@ DistributedLock::Resource::Member* DistributedLock::Resource::addMember(unsigned
 bool DistributedLock::Resource::removeMember(unsigned int id) {
     Member* member = this->getMember(id);
     if (member!=NULL) {
+        std::lock_guard<std::mutex> lock(this->members_m);
         this->members.erase(id);
         delete(member);
         return true;
     }
     return false;
+}
+
+bool DistributedLock::Resource::isAcquirable() {
+    unsigned int num_members = 0;
+    for(auto it=this->members.begin();it!=this->members.end();it++) {
+        Member* m = (*it).second;
+        if (m->state == ACQUIRED) {
+            num_members++;
+        }
+    }
+
+    //debug << "current members " << num_members << " count " << this->count << std::endl;
+    return true;
+
+    //return (num_members < this->count);
+}
+
+void DistributedLock::Resource::reset() {
+    this->state = IDLE;
+    std::lock_guard<std::mutex> lock(this->members_m);
+    for(auto it=this->members.begin();it!=this->members.end();) {
+        Member* m = (*it).second;
+        this->members.erase(it++);
+        delete(m);
+    }
 }
 
 /* Distributed Lock implementation */
@@ -96,7 +141,7 @@ bool DistributedLock::defineResource(std::string res, unsigned int count=1) {
     return resource != NULL;
 }
 
-bool DistributedLock::adquire(std::string res) {
+bool DistributedLock::acquire(std::string res) {
     return this->adquire_lock(res);
 }
 
@@ -131,6 +176,7 @@ unsigned int DistributedLock::getRandomId() {
 }
 
 DistributedLock::Resource* DistributedLock::getResource(std::string res) {
+    std::lock_guard<std::mutex> lock(this->res_m);
     if (this->resources.find(res) != this->resources.end()) {
         // resource already in our map 
         Resource* resource = this->resources[res];
@@ -140,8 +186,10 @@ DistributedLock::Resource* DistributedLock::getResource(std::string res) {
 }
 
 void DistributedLock::removeResource(std::string res) {
+    std::lock_guard<std::mutex> lock(this->res_m);
+
     if (this->resources.find(res) != this->resources.end()) {
-        //std::cout << this->id << " removing resource " << res << std::endl;
+        //debug << this->id << " removing resource " << res << std::endl;
         Resource* resource = this->resources[res];
         this->resources.erase(res);
         delete(resource);
@@ -150,6 +198,8 @@ void DistributedLock::removeResource(std::string res) {
 
 DistributedLock::Resource* DistributedLock::createResource(std::string res) {
     Resource* resource = NULL;
+    std::lock_guard<std::mutex> lock(this->res_m);
+ 
     if (this->resources.find(res) != this->resources.end()) {
         // resource already in our map 
         resource = this->resources[res];
@@ -164,6 +214,7 @@ void DistributedLock::release_lock(std::string res) {
     Resource* resource = this->getResource(res);
     if (resource != NULL) {
         try {
+            resource->setState(Resource::RELEASED);
             resource->stop();
         } catch(Exception& e) {
             throw(e);
@@ -182,38 +233,57 @@ bool DistributedLock::adquire_lock(std::string res) {
 
     unsigned int retry = 0;
 
+    Resource* resource = this->getResource(res);
+    if (resource == NULL) {
+        resource = createResource(res);
+    }
+
     while((this->retry_max == 0) || retry < this->retry_max) {
 
         unsigned long int wait_time = this->beacon_time * (this->sense_beacons * (1+dist(rng)));  
-        //std::cout << this->id << " trying to adquire " << res << " " << wait_time <<std::endl;
+        //debug << this->id << " trying to adquire " << res << " " << wait_time <<std::endl;
 
-        if (!this->ch->waitForPacket(wait_time)) {
-            // no packet arrive for 1000 ms
-            Resource* resource = this->createResource(res);
-            resource->setState(Resource::ADQUIRING);
-            resource->start(); 
+        if (!this->listenForPacket(wait_time)) {
+
+            resource->setState(Resource::ACQUIRING);
 
             // adquiring time for collision detection
             auto adquiring_time = std::chrono::milliseconds(  this->beacon_time  * this->sense_beacons );
             std::unique_lock<std::mutex> lk(cv_m);
             if (cv.wait_for(lk, adquiring_time) == std::cv_status::timeout) {
-                resource->setState(Resource::ADQUIRED);
-                return true;
+
+                if (resource->isAcquirable()) {
+                    resource->setState(Resource::ACQUIRED);
+
+                    debug << this->id << " *** Resource Adquired" << std::endl;
+                   return true;
+                } else {
+                    debug << this->id << " *** Resource complete!. Falling in Backoff" << std::endl;
+                }
             }
-            this->removeResource(res);
-            std::cout << "*** Colision Detected!!! Forcing Backoff" << std::endl;
+            resource->reset();
+
+            retry++;
         }
-        
         unsigned long int backoff_time = (this->beacon_time * 2 * this->sense_beacons) * (1+dist(rng)) ;
-        //std::cout << this->id << " failed attempt to adquire " << res << " backoff " << backoff_time << std::endl;
+        //debug << this->id << " failed attempt to adquire " << res << " backoff " << backoff_time << std::endl;
         std::this_thread::sleep_for(std::chrono::milliseconds(backoff_time));
 
-        retry++;
     }
 
-    //std::cout << "not adquired" << std::endl;
+    //debug << "not adquired" << std::endl;
 
     return false;
+}
+
+bool DistributedLock::listenForPacket(unsigned long int wt) {
+    std::unique_lock<std::mutex> lk(listen_m);
+
+    auto wait_time = std::chrono::milliseconds(wt);
+    if (listen_cv.wait_for(lk, wait_time) == std::cv_status::timeout) {
+        return false;
+    }
+    return true;
 }
 
 void DistributedLock::actionPerformed(ActionEvent* evt) {
@@ -222,24 +292,27 @@ void DistributedLock::actionPerformed(ActionEvent* evt) {
         DLPacket* pkt = pkt_evt->getPacket();
 
         if (pkt->getMemberId() != this->id) {
+
             std::string res = pkt->getResource();
+            {
+                std::lock_guard<std::mutex> lock(this->update_m);
+                Resource* resource = this->getResource(res);
+                if (resource != NULL) {
 
-            Resource* resource = this->getResource(res);
-            if (resource != NULL) {
-                Resource::State state = (Resource::State)pkt->getState();
-                resource->updateMember(pkt->getMemberId(), state, pkt->getCount());
+                    if (pkt->getState() == Resource::ACQUIRING) {
+                        listen_cv.notify_all();
 
-                if (resource->getState() == Resource::ADQUIRING && pkt->getState() == Resource::ADQUIRING) {
-                    // collision!!!
-                    cv.notify_all();
+                        Resource::State state = (Resource::State)pkt->getState();
+                        resource->updateMember(pkt->getMemberId(), state, pkt->getCount());
+
+                        if (resource->getState() == Resource::ACQUIRING) {
+                            cv.notify_all();
+                        }
+                    }
                 }
-
-                std::cout << *resource << std::endl;
-
             }
-
         } else {
-            //std::cout << "Arrived packet is from myself. discarding it" << std::endl;
+            //debug << "Arrived packet is from myself. discarding it" << std::endl;
         }
     }
 }

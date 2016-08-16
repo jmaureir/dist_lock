@@ -1,7 +1,7 @@
 /**********************************************************
 * File Name : UDPSocket.h
 *
-* Last Modified : Wed 09 Dec 2015 04:03:25 PM CLT
+* Last Modified : Tue 16 Aug 2016 12:48:57 AM GYT
 * (c) Juan-Carlos Maureira
 * Center for Mathematical Modeling
 * University of Chile
@@ -42,7 +42,7 @@ class UDPSocket {
 		UDPSocket(int port);
 		UDPSocket(unsigned int s_addr, int port);
 
-		~UDPSocket();
+	    virtual ~UDPSocket();
 
 		int getPort() {
 			return this->port;

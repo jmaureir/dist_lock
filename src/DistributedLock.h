@@ -4,7 +4,7 @@
  *
  * Author        : Juan Carlos Maureira
  * Created       : Wed 09 Dec 2015 04:07:14 PM CLT
- * Last Modified : Fri 12 Aug 2016 10:14:00 AM GYT
+ * Last Modified : Tue 16 Aug 2016 01:05:00 AM GYT
  *
  * (c) 2015-2016 Juan Carlos Maureira
  * (c) 2016      Andrew Hart
@@ -24,16 +24,14 @@
 #include <ratio>
 #include <chrono>
 
-#include "Debug.h"
-
-class DistributedLock : public ActionListener, public Debug {
+class DistributedLock : public ActionListener {
     private:
         class Resource : public Thread, public Observable {
             public:
                 enum State {
                     IDLE          = 0,
-                    ADQUIRING     = 1,
-                    ADQUIRED      = 2,
+                    ACQUIRING     = 1,
+                    ACQUIRED      = 2,
                     RELEASED      = 3,
                 };
 
@@ -65,6 +63,7 @@ class DistributedLock : public ActionListener, public Debug {
                 std::chrono::system_clock::time_point tp;
 
                 MemberList                 members;
+                std::mutex                 members_m;
 
                 Member* getMember(unsigned int id);
                 Member* addMember(unsigned int id);
@@ -81,10 +80,20 @@ class DistributedLock : public ActionListener, public Debug {
                     this->count      = 1;
 
                     this->tp         = std::chrono::system_clock::now();
+
+                    this->start();
                 }
                 ~Resource() {
-                    this->stop();
-                    this->join();
+
+                    for(auto it=this->members.begin();it!=this->members.end();) {
+                        Member* m = (*it).second;
+                        this->members.erase(it++);
+                        delete(m);
+                    }
+
+                    if (this->running) {
+                        this->stop();
+                    }
                 }
                 virtual void run();
                 virtual void stop();
@@ -97,11 +106,18 @@ class DistributedLock : public ActionListener, public Debug {
                     this->count = c;
                 }
 
+                unsigned int getCount() {
+                    return this->count;
+                }
+
                 void setState(State s) {
                     this->state = s;
                 }
 
+                void reset();
+
                 void updateMember(unsigned int id, State state, unsigned int count);
+                bool isAcquirable();
 
                 friend std::ostream& operator << (std::ostream& os, Resource& obj) {
                     os << obj.name << ", " << obj.state << ", " << obj.members.size() << "[";
@@ -129,6 +145,11 @@ class DistributedLock : public ActionListener, public Debug {
         ResourceMap resources;
 
         std::mutex                 res_m;
+        std::mutex                 update_m;
+
+        std::condition_variable    listen_cv;
+        std::mutex                 listen_m;
+
         std::condition_variable    cv;
         std::mutex                 cv_m;
 
@@ -143,6 +164,8 @@ class DistributedLock : public ActionListener, public Debug {
         unsigned int getRandomId();
 
         unsigned int getId();
+
+        bool listenForPacket(unsigned long int wt);
 
     public:
         DistributedLock(unsigned int id=0, unsigned int port=5000) {
@@ -161,15 +184,27 @@ class DistributedLock : public ActionListener, public Debug {
        }
 
         ~DistributedLock() {
-            for(auto it=this->resources.begin();it!=this->resources.end();it++) {
-                std::string res = (*it).first;
-                this->release_lock(res);
-            }
+            this->releaseAll();
+            this->ch->stop();
+            {
+                std::lock_guard<std::mutex> lock(this->update_m);
 
+                for(auto it=this->resources.begin();it!=this->resources.end();) {
+                    std::string res = (*it).first;
+                    Resource* r = (*it).second;
+                    r->stop();
+
+                    this->resources.erase(it++);
+                    delete(r);
+                }
+            }
             delete(this->ch);
+
+            std::cout << "DistLocker done" << std::endl;
+
         }
 
-        bool adquire(std::string resource);
+        bool acquire(std::string resource);
         bool release(std::string resource);
         bool releaseAll();
 

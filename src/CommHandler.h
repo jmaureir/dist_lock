@@ -4,7 +4,7 @@
  *
  * Author        : Juan Carlos Maureira
  * Created       : Wed 09 Dec 2015 03:13:44 PM CLT
- * Last Modified : Mon 14 Dec 2015 06:44:00 PM CLT
+ * Last Modified : Tue 16 Aug 2016 01:07:34 AM GYT
  *
  * (c) 2015 Juan Carlos Maureira
  */
@@ -23,11 +23,11 @@
 
 class CommHandler : public UDPSocket, public Thread, public Observable {
     private:
-        bool          running = false;
-        InetAddress   bcast_addr;
+        std::atomic<bool>       running;
+        InetAddress             bcast_addr;
 
         std::condition_variable cv;
-        std::mutex cv_m;
+        std::mutex              cv_m;
 
     public:
 
@@ -44,20 +44,23 @@ class CommHandler : public UDPSocket, public Thread, public Observable {
         };
 
         CommHandler(int port) : UDPSocket(port), Thread(), Observable() {
+            this->running = false;
             this->setTimeout(0,300); // 300 ns for readining timeout
             this->start();
             this->wait();
 
-            this->bcast_addr = InetAddress("255.255.255.255");
+            //this->bcast_addr = InetAddress("255.255.255.255");
+            this->bcast_addr = InetAddress("127.255.255.255");
 
         } 
 
         ~CommHandler() {
-            this->running = false;
-            this->close();
-            this->join();
+            if (this->running) {
+                this->stop();
+            }
         }
 
+        virtual void stop();
         virtual bool send(DLPacket* pkt);
 
         bool waitForPacket(unsigned long time);
