@@ -4,8 +4,8 @@
  *
  * Author        : Juan Carlos Maureira
  * Created       : Wed 09 Dec 2015 04:09:39 PM CLT
- * Last Modified : Tue 16 Aug 2016 03:39:41 PM CLT
- * Last Modified : Tue 16 Aug 2016 03:39:41 PM CLT
+ * Last Modified : Tue 16 Aug 2016 04:22:26 PM CLT
+ * Last Modified : Tue 16 Aug 2016 04:22:26 PM CLT
  *
  * (c) 2015-2016 Juan Carlos Maureira
  * (c) 2016      Andrew Hart
@@ -18,11 +18,16 @@
 RegisterDebugClass(DistributedLock,ALL)
 
 CommHandler* DistributedLock::s_ch = NULL;
+std::atomic<int> DistributedLock::s_ch_count;
 
 CommHandler* DistributedLock::getCommHandlerInstance(unsigned int port) {
     if (DistributedLock::s_ch == NULL) {
         DistributedLock::s_ch = new CommHandler(port);
     }
+    DistributedLock::s_ch_count++;
+
+    //std::cout << DistributedLock::s_ch_count << std::endl;
+
     return DistributedLock::s_ch;
 }
 
@@ -44,7 +49,6 @@ void DistributedLock::Resource::run() {
             beacon_pkt->setResource(this->name);
             beacon_pkt->setCount(this->count);
             this->parent->ch->send(beacon_pkt);
-
         }
         if (cv.wait_for(lk, std::chrono::milliseconds(this->parent->beacon_time)) != std::cv_status::timeout) {
             break;

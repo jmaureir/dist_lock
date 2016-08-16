@@ -4,7 +4,7 @@
  *
  * Author        : Juan Carlos Maureira
  * Created       : Wed 09 Dec 2015 04:07:14 PM CLT
- * Last Modified : Tue 16 Aug 2016 03:37:54 PM CLT
+ * Last Modified : Tue 16 Aug 2016 04:22:34 PM CLT
  *
  * (c) 2015-2016 Juan Carlos Maureira
  * (c) 2016      Andrew Hart
@@ -139,6 +139,7 @@ class DistributedLock : public ActionListener {
     private:
 
         static CommHandler* s_ch;
+        static std::atomic<int> s_ch_count;
 
         CommHandler* ch;
         unsigned int id;
@@ -183,7 +184,7 @@ class DistributedLock : public ActionListener {
     public:
         DistributedLock(unsigned int id=0, unsigned int port=5000) {
             try {
-                this->ch = getCommHandlerInstance(port);
+                this->ch = DistributedLock::getCommHandlerInstance(port);
             } catch (Exception& e) {
                 throw(e);
             }
@@ -198,7 +199,7 @@ class DistributedLock : public ActionListener {
 
         ~DistributedLock() {
             this->releaseAll();
-            this->ch->stop();
+            this->ch->removeActionListener(this);
             {
                 std::lock_guard<std::mutex> lock(this->update_m);
 
@@ -211,7 +212,12 @@ class DistributedLock : public ActionListener {
                     delete(r);
                 }
             }
-            delete(this->ch);
+
+            DistributedLock::s_ch_count--;
+            //std::cout << DistributedLock::s_ch_count  << std::endl;
+            if (DistributedLock::s_ch_count==0) {
+                delete(this->ch);
+            }
         }
 
         bool acquire(std::string resource);
