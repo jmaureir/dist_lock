@@ -4,7 +4,7 @@
  *
  * Author        : Juan Carlos Maureira
  * Created       : Wed 09 Dec 2015 03:17:29 PM CLT
- * Last Modified : Tue 16 Aug 2016 04:17:45 PM CLT
+ * Last Modified : Wed 17 Aug 2016 11:35:33 AM CLT
  *
  * (c) 2015 Juan Carlos Maureira
  */
@@ -58,8 +58,9 @@ void CommHandler::stop() {
 bool CommHandler::send(DLPacket* pkt) {
     pkt->setDestinationPort(this->getPort());
     pkt->setDestinationAddr(this->bcast_addr.getInAddress());
-    this->UDPSocket::send(pkt);
+    bool r = this->UDPSocket::send(pkt);
     delete(pkt);
+    return r;
 }
 
 bool CommHandler::waitForPacket(unsigned long time) {
