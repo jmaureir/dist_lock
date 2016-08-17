@@ -4,8 +4,8 @@
  *
  * Author        : Juan Carlos Maureira
  * Created       : Wed 09 Dec 2015 04:09:39 PM CLT
- * Last Modified : Tue 16 Aug 2016 04:22:26 PM CLT
- * Last Modified : Tue 16 Aug 2016 04:22:26 PM CLT
+ * Last Modified : Wed 17 Aug 2016 10:36:09 AM CLT
+ * Last Modified : Wed 17 Aug 2016 10:36:09 AM CLT
  *
  * (c) 2015-2016 Juan Carlos Maureira
  * (c) 2016      Andrew Hart
@@ -327,7 +327,7 @@ void DistributedLock::actionPerformed(ActionEvent* evt) {
                             Resource::State state = (Resource::State)pkt->getState();
                             resource->updateMember(pkt->getMemberId(), state, pkt->getCount());
                         }
-                        if (resource->getState() == Resource::ACQUIRING) {
+                        if (resource->getState() == Resource::ACQUIRING || resource->getState() == Resource::ACQUIRED) {
                             cv.notify_one();
                         }
                     }

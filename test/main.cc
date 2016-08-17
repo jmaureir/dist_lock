@@ -4,7 +4,7 @@
  *
  * Author        : Juan Carlos Maureira
  * Created       : Wed 09 Dec 2015 03:12:59 PM CLT
- * Last Modified : Tue 16 Aug 2016 11:33:32 AM CLT
+ * Last Modified : Wed 17 Aug 2016 10:39:21 AM CLT
  *
  * (c) 2015 Juan Carlos Maureira
  */
@@ -22,8 +22,6 @@
 
 void job(int idx) {
     DistributedLock* dl = new DistributedLock(idx);
-
-    //dl.outEnabled(false);
 
     if (dl->acquire("changer")) {
         std::cout << idx << " ***** resource adquired ***** " << std::endl;
@@ -62,6 +60,11 @@ void job(int idx) {
 
 int main(int argc, char **argv) {
 
+    std::fstream shared_file("shared.txt", std::ios::in | std::ios::out );
+    int busy = 0;
+    shared_file << busy;
+    shared_file.close();
+
     std::vector<std::thread> jobs;
 
     int max_jobs = 3; 
@@ -75,7 +78,7 @@ int main(int argc, char **argv) {
     } 
 
     for(int i=0;i<max_jobs;i++) {
-        std::cout << "joining job " << i << std::endl;
+        std::cout << "joining job " << i+1 << std::endl;
         jobs[i].join();
     }
 }

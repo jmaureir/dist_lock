@@ -4,7 +4,7 @@
  *
  * Author        : Juan Carlos Maureira
  * Created       : Wed 09 Dec 2015 04:07:14 PM CLT
- * Last Modified : Tue 16 Aug 2016 04:22:34 PM CLT
+ * Last Modified : Wed 17 Aug 2016 10:40:31 AM CLT
  *
  * (c) 2015-2016 Juan Carlos Maureira
  * (c) 2016      Andrew Hart
@@ -144,7 +144,7 @@ class DistributedLock : public ActionListener {
         CommHandler* ch;
         unsigned int id;
 
-        unsigned long int beacon_time   = 100; // ms 
+        unsigned long int beacon_time   = 50; // ms 
         unsigned int      sense_beacons = 3;
 
         unsigned int      retry_max     = 0; // undefined
