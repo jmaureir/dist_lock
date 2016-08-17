@@ -4,8 +4,8 @@
  *
  * Author        : Juan Carlos Maureira
  * Created       : Wed 09 Dec 2015 04:09:39 PM CLT
- * Last Modified : Wed 17 Aug 2016 11:22:30 AM CLT
- * Last Modified : Wed 17 Aug 2016 11:22:30 AM CLT
+ * Last Modified : Wed 17 Aug 2016 11:38:09 AM CLT
+ * Last Modified : Wed 17 Aug 2016 11:38:09 AM CLT
  *
  * (c) 2015-2016 Juan Carlos Maureira
  * (c) 2016      Andrew Hart
@@ -40,7 +40,9 @@ void DistributedLock::Resource::sendBeacon() {
 
     beacon_pkt->setResource(this->name);
     beacon_pkt->setCount(this->count);
-    this->parent->ch->send(beacon_pkt);
+    if (!this->parent->ch->send(beacon_pkt)) {
+        debug << "Error sending the beacon packet" << std::endl;
+    }
 }
 
 void DistributedLock::Resource::run() {
