@@ -4,8 +4,8 @@
  *
  * Author        : Juan Carlos Maureira
  * Created       : Wed 09 Dec 2015 04:09:39 PM CLT
- * Last Modified : Wed 17 Aug 2016 04:38:17 PM CLT
- * Last Modified : Wed 17 Aug 2016 04:38:17 PM CLT
+ * Last Modified : Wed 17 Aug 2016 04:58:46 PM CLT
+ * Last Modified : Wed 17 Aug 2016 04:58:46 PM CLT
  *
  * (c) 2015-2016 Juan Carlos Maureira
  * (c) 2016      Andrew Hart
@@ -342,12 +342,14 @@ bool DistributedLock::adquire_lock() {
             if (cv.wait_for(lk, adquiring_time) == std::cv_status::timeout) {
 
                 bool all_acquirable = true;
+                std::string busy_res = "";
                 for(auto it=this->resources.begin();it!=this->resources.end();it++) {
                     Resource* resource = (*it).second;
                     if (resource->isAcquirable()) {
                         resource->setState(Resource::ACQUIRED);
                     } else {
                         all_acquirable = false; 
+                        busy_res = (*it).first;
                         break;
                     }
                 }
@@ -355,7 +357,7 @@ bool DistributedLock::adquire_lock() {
                     //debug << this->id << " *** Resource Adquired" << std::endl;
                     return true;
                 } else {
-                    debug << this->id << " *** Resource complete!. Falling in Backoff" << std::endl;
+                    debug << this->id << " *** Resource " << busy_res << " complete!. Falling in Backoff" << std::endl;
                 }
             }
             for(auto it=this->resources.begin();it!=this->resources.end();it++) {

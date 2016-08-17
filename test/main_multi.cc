@@ -5,7 +5,7 @@
  *
  * Author        : Juan Carlos Maureira
  * Created       : Wed 17 Aug 2016 04:24:56 PM CLT
- * Last Modified : Wed 17 Aug 2016 04:48:31 PM CLT
+ * Last Modified : Wed 17 Aug 2016 04:59:05 PM CLT
  *
  * (c) 2015 Juan Carlos Maureira
  */
@@ -55,7 +55,6 @@ void job_single(int idx) {
 
 }
 
-
 void job_multi(int idx) {
     DistributedLock* dl = new DistributedLock(idx);
 
@@ -73,7 +72,6 @@ void job_multi(int idx) {
             std::cout << "r1 max count exceeded." << std::endl;
             exit(1);
         }
-
 
         std::this_thread::sleep_for(std::chrono::milliseconds(1000));
 
