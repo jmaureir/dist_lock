@@ -4,7 +4,7 @@
  *
  * Author        : Juan Carlos Maureira
  * Created       : Wed 09 Dec 2015 04:07:14 PM CLT
- * Last Modified : Wed 17 Aug 2016 11:23:58 AM CLT
+ * Last Modified : Wed 17 Aug 2016 11:57:40 AM CLT
  *
  * (c) 2015-2016 Juan Carlos Maureira
  * (c) 2016      Andrew Hart
@@ -85,6 +85,8 @@ class DistributedLock : public ActionListener {
                     this->count      = 1;
 
                     this->tp         = std::chrono::system_clock::now();
+
+                     Debug::getInstance().registerClass<DistributedLock::Resource>(ALL);
 
                     this->start();
                 }
