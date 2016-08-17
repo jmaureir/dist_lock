@@ -4,7 +4,7 @@
  *
  * Author        : Juan Carlos Maureira
  * Created       : Wed 09 Dec 2015 04:07:14 PM CLT
- * Last Modified : Wed 17 Aug 2016 03:35:59 PM CLT
+ * Last Modified : Wed 17 Aug 2016 04:32:13 PM CLT
  *
  * (c) 2015-2016 Juan Carlos Maureira
  * (c) 2016      Andrew Hart
@@ -175,6 +175,8 @@ class DistributedLock : public ActionListener {
         void removeResource(std::string res);
 
         bool adquire_lock(std::string res);
+        bool adquire_lock();
+
         void release_lock(std::string res);
         void query_lock(std::string res);
 
@@ -227,11 +229,11 @@ class DistributedLock : public ActionListener {
             }
         }
 
-        bool acquire(std::string resource);
+        bool acquire(std::string resource="");
         bool release(std::string resource);
         bool releaseAll();
 
-        bool defineResource(std::string resource,unsigned int count);
+        bool defineResource(std::string resource,unsigned int count=1);
     
         void setAdquireMaxRetry(unsigned int n);
 

@@ -3,7 +3,7 @@
  *
  * Author        : Juan Carlos Maureira
  * Created       : Wed 09 Dec 2015 03:12:59 PM CLT
- * Last Modified : Wed 17 Aug 2016 03:38:41 PM CLT
+ * Last Modified : Wed 17 Aug 2016 04:14:53 PM CLT
  *
  * (c) 2015-2016 Juan Carlos Maureira
  * (c) 2016      Andrew Hart
@@ -153,25 +153,25 @@ int main(int argc, char **argv) {
 
         dl->setAdquireMaxRetry(retry_num);
 
-        for(auto it=res_map.begin();it!=res_map.end();it++) {
-            std::string resource = (*it).first;
-            unsigned int count  = (*it).second;
-            if (!dl->defineResource(resource,count)) {
-                std::cerr << "DistributedLock: error registering resource " << resource << "." << std::endl;
-                return 4;
-            }
-        }
+        if (res_map.size() > 0 ) {
 
+            for(auto it=res_map.begin();it!=res_map.end();it++) {
+                std::string resource = (*it).first;
+                unsigned int count  = (*it).second;
+                if (!dl->defineResource(resource,count)) {
+                    std::cerr << "DistributedLock: error registering resource " << resource << "." << std::endl;
+                    return 4;
+                }
+            }
+        } else {
+            exit(usage(name));
+        }
     } catch(Exception& e) {
         std::cerr << "DistributedLock: initialization error." << std::endl;
         std::cerr << e.what() << std::endl;
         return 3;
     }
 
-    // check resource name is provided
-    if (resource == "") {
-        return usage(name);
-    }
 
     // check command to execute
     std::stringstream cmd;
