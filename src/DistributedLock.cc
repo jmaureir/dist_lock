@@ -4,8 +4,8 @@
  *
  * Author        : Juan Carlos Maureira
  * Created       : Wed 09 Dec 2015 04:09:39 PM CLT
- * Last Modified : Wed 17 Aug 2016 10:36:09 AM CLT
- * Last Modified : Wed 17 Aug 2016 10:36:09 AM CLT
+ * Last Modified : Wed 17 Aug 2016 10:51:57 AM CLT
+ * Last Modified : Wed 17 Aug 2016 10:51:57 AM CLT
  *
  * (c) 2015-2016 Juan Carlos Maureira
  * (c) 2016      Andrew Hart
@@ -276,8 +276,8 @@ bool DistributedLock::adquire_lock(std::string res) {
                 if (resource->isAcquirable()) {
                     resource->setState(Resource::ACQUIRED);
 
-                    debug << this->id << " *** Resource Adquired" << std::endl;
-                   return true;
+                    //debug << this->id << " *** Resource Adquired" << std::endl;
+                    return true;
                 } else {
                     debug << this->id << " *** Resource complete!. Falling in Backoff" << std::endl;
                 }

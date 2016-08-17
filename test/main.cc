@@ -4,7 +4,7 @@
  *
  * Author        : Juan Carlos Maureira
  * Created       : Wed 09 Dec 2015 03:12:59 PM CLT
- * Last Modified : Wed 17 Aug 2016 10:39:21 AM CLT
+ * Last Modified : Wed 17 Aug 2016 10:56:05 AM CLT
  *
  * (c) 2015 Juan Carlos Maureira
  */
@@ -60,10 +60,7 @@ void job(int idx) {
 
 int main(int argc, char **argv) {
 
-    std::fstream shared_file("shared.txt", std::ios::in | std::ios::out );
-    int busy = 0;
-    shared_file << busy;
-    shared_file.close();
+    unlink("shared.txt");
 
     std::vector<std::thread> jobs;
 
