@@ -4,8 +4,8 @@
  *
  * Author        : Juan Carlos Maureira
  * Created       : Wed 09 Dec 2015 04:09:39 PM CLT
- * Last Modified : Wed 17 Aug 2016 12:00:38 PM CLT
- * Last Modified : Wed 17 Aug 2016 12:00:38 PM CLT
+ * Last Modified : Wed 17 Aug 2016 02:29:44 PM CLT
+ * Last Modified : Wed 17 Aug 2016 02:29:44 PM CLT
  *
  * (c) 2015-2016 Juan Carlos Maureira
  * (c) 2016      Andrew Hart
@@ -15,7 +15,7 @@
 
 #include <thread>
 
-RegisterDebugClass(DistributedLock,ALL)
+RegisterDebugClass(DistributedLock,NONE)
 
 CommHandler* DistributedLock::s_ch = NULL;
 std::atomic<int> DistributedLock::s_ch_count;
@@ -132,7 +132,7 @@ bool DistributedLock::Resource::isAcquirable() {
         }
     }
 
-    debug << "current members " << num_members << " count " << this->count << std::endl;
+    //debug << "current members " << num_members << " count " << this->count << std::endl;
 
     return (num_members < this->count);
 }

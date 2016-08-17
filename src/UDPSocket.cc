@@ -1,7 +1,7 @@
 /**********************************************************
 * File Name : UDPSocket.cc
 *
-* Last Modified : Tue 16 Aug 2016 03:19:59 PM CLT
+* Last Modified : Wed 17 Aug 2016 12:32:20 PM CLT
 * (c) Juan-Carlos Maureira
 * Center for Mathematical Modeling
 * University of Chile
@@ -206,7 +206,11 @@ UDPDatagram* UDPSocket::receive() {
 	msg.msg_control    = &cmsg;
 	msg.msg_controllen = sizeof cmsg;
 
-	while (true) {
+    int count_max = 30;
+    int count = 0;
+
+	while (count < count_max) {
+        count++;
 		//ssize_t len = recvfrom(sockfd, recv_buf, BUFSIZE, MSG_WAITALL,(struct sockaddr *)&clientaddr, &clientlen);
 		ssize_t len = recvmsg(sockfd, &msg ,0);
 

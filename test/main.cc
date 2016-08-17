@@ -4,7 +4,7 @@
  *
  * Author        : Juan Carlos Maureira
  * Created       : Wed 09 Dec 2015 03:12:59 PM CLT
- * Last Modified : Wed 17 Aug 2016 10:56:05 AM CLT
+ * Last Modified : Wed 17 Aug 2016 02:50:45 PM CLT
  *
  * (c) 2015 Juan Carlos Maureira
  */
@@ -16,7 +16,6 @@
 
 #include <fstream>
 
-#include "CommHandler.h"
 #include "DistributedLock.h"
 #include "Debug.h"
 
@@ -28,23 +27,31 @@ void job(int idx) {
 
         std::fstream shared_file("shared.txt", std::ios::in | std::ios::out );
         int busy = 0;
-        shared_file >> busy;
-        
-        if (busy == 0) {
-            std::cout << idx << " shared file available" << std::endl;
-            shared_file.seekg (0, std::ios::beg);
-            shared_file << idx << std::endl;
-        } else {
-            std::cout << idx << " ***** shared file busy!!! ***** " << std::endl;
+        int offset = 0;
+        shared_file >> busy >> offset;
+
+        if (!shared_file.eof()) {
+            std::cout << "not end of file" << std::endl;
             shared_file.close();
             exit(1);
         }
-        std::this_thread::sleep_for(std::chrono::milliseconds(100));
+        shared_file.close(); 
+        if (busy == 0) {
+            std::cout << idx << " shared file available" << std::endl;
+            std::ofstream shared_file_out("shared.txt");
+            shared_file_out << idx;
+            shared_file_out.close();
 
+        } else {
+            std::cout << idx << " ***** shared file busy!!! ***** " << std::endl;
+            exit(1);
+        }
+        std::this_thread::sleep_for(std::chrono::milliseconds(500));
+
+        std::ofstream shared_file_out("shared.txt");
         std::cout << idx << " releasing shared file" << std::endl;
-        shared_file.seekg (0, std::ios::beg);
-        shared_file << "0" << std::endl;
-        shared_file.close();
+        shared_file_out << 0;
+        shared_file_out.close();
 
         if (dl->release("changer")) {
             std::cout << idx << " ***** resource released ***** " << std::endl;
@@ -61,6 +68,10 @@ void job(int idx) {
 int main(int argc, char **argv) {
 
     unlink("shared.txt");
+    std::ofstream shared_file("shared.txt" );
+    int busy = 0;
+    shared_file << busy;
+    shared_file.close();
 
     std::vector<std::thread> jobs;
 
