@@ -3,7 +3,7 @@
  *
  * Author        : Juan Carlos Maureira
  * Created       : Wed 09 Dec 2015 03:12:59 PM CLT
- * Last Modified : Wed 17 Aug 2016 11:45:59 AM CLT
+ * Last Modified : Wed 17 Aug 2016 03:38:41 PM CLT
  *
  * (c) 2015-2016 Juan Carlos Maureira
  * (c) 2016      Andrew Hart
@@ -20,9 +20,10 @@
 #include "DistributedLock.h"
 #include "StringTokenizer.h"
 
+#define VERSION "1.0.0"
 
 int usage(std::string& name) {
-    std::cerr << "usage: " << name << " [-h] [-v] -r resource1[:count1] ";
+    std::cerr << "usage: " << name << " [-h] [-v] [ -b beacon_time] -r resource1[:count1] ";
     std::cerr << "[-r resource2[:count2] ...]"<< std::endl;
     std::cerr << "    [-n max_tries] [-p port] -- command_to_execute [args ...]"<< std::endl;
 	  std::cerr << std::endl;
@@ -31,7 +32,7 @@ int usage(std::string& name) {
 }
 
 int showVersion(std::string& name) {
-    std::cerr << name << " 1.0.0" << std::endl;
+    std::cerr << name << VERSION << std::endl;
     return 0;
 }
 
@@ -48,8 +49,9 @@ int showHelp(std::string& name) {
     std::cout << "can be used to manage access to shared resources by various processes, even if" << std::endl;
     std::cout << "they have different owners." << std::endl;
     std::cout << std::endl;
-    std::cout << "usage: "<< name << " [-h] [-v] -r resource1[:count1] [-r resource2[:count2] ...]" << std::endl;
-    std::cout << "    [-n max_tries] [-p port] -- command_to_execute [args ...]" << std::endl;
+
+    usage(name);
+
     std::cout << std::endl;
     std::cout << "-h" << std::endl;
     std::cout << "Show this help and exit." << std::endl;
@@ -85,19 +87,28 @@ int main(int argc, char **argv) {
     int status = 0;
     unsigned int port = 5000;
     unsigned int retry_num = 0;   
+    unsigned int beacon_time = 50; // ms
+    std::string  bcast_addr  = "127.255.255.255";
+
     std::map<std::string,unsigned int> res_map;
  
-// Get executable name
+    // Get executable name
     std::string name(basename(std::string(argv[0]).c_str()));
 
-// Process command-line arguments
-    while ((c = getopt (argc, argv, "hvr:n:p:")) != -1) {
+    // Process command-line arguments
+    while ((c = getopt (argc, argv, "hvr:n:p:b:B:")) != -1) {
         switch (c) {
             case 'h':
         		    return showHelp(name);
         		    break;
             case 'v':
         		    return showVersion(name);
+        		    break;
+            case 'b':
+                    beacon_time = atoi(optarg);
+        		    break;
+            case 'B':
+                    bcast_addr = optarg;
         		    break;
             case 'r':
                 if (optarg!=NULL && strlen(optarg) > 0 ) {
@@ -138,7 +149,7 @@ int main(int argc, char **argv) {
     DistributedLock* dl = NULL;
 
     try {
-        dl = new DistributedLock(0,port);
+        dl = new DistributedLock(0,port,beacon_time, bcast_addr);
 
         dl->setAdquireMaxRetry(retry_num);
 
@@ -153,6 +164,7 @@ int main(int argc, char **argv) {
 
     } catch(Exception& e) {
         std::cerr << "DistributedLock: initialization error." << std::endl;
+        std::cerr << e.what() << std::endl;
         return 3;
     }
 

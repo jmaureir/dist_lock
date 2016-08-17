@@ -4,7 +4,7 @@
  *
  * Author        : Juan Carlos Maureira
  * Created       : Wed 09 Dec 2015 03:13:44 PM CLT
- * Last Modified : Tue 16 Aug 2016 04:06:34 PM CLT
+ * Last Modified : Wed 17 Aug 2016 03:31:03 PM CLT
  *
  * (c) 2015 Juan Carlos Maureira
  */
@@ -43,13 +43,17 @@ class CommHandler : public UDPSocket, public Thread, public Observable {
                 }
         };
 
-        CommHandler(int port) : UDPSocket(port), Thread(), Observable() {
+        CommHandler(std::string bcast_addr, int port) : UDPSocket(port), Thread(), Observable() {
             this->running = false;
             this->setTimeout(0,300); // 300 ns for readining timeout
             this->start();
             this->wait();
 
-            this->bcast_addr = InetAddress("127.255.255.255");
+            try {
+                this->bcast_addr = InetAddress(bcast_addr.c_str());
+            } catch(Exception& e) {
+                throw(e);
+            }
 
         } 
 

@@ -69,7 +69,7 @@ InetAddress::InetAddress(const char* ip_chr) {
 		r = gethostbyname_r(ip.c_str(),&theHostEntity,theBuffer,sizeof(theBuffer),&theResult ,&e);
 
 		if (theResult==NULL) {
-			throw(new Exception("Unknown host Address"));
+			throw(Exception("Unknown host Address"));
 			return;
 		}
 

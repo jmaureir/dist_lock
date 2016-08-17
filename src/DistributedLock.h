@@ -4,7 +4,7 @@
  *
  * Author        : Juan Carlos Maureira
  * Created       : Wed 09 Dec 2015 04:07:14 PM CLT
- * Last Modified : Wed 17 Aug 2016 12:54:27 PM CLT
+ * Last Modified : Wed 17 Aug 2016 03:35:59 PM CLT
  *
  * (c) 2015-2016 Juan Carlos Maureira
  * (c) 2016      Andrew Hart
@@ -86,7 +86,7 @@ class DistributedLock : public ActionListener {
 
                     this->tp         = std::chrono::system_clock::now();
 
-                    //Debug::getInstance().registerClass<DistributedLock::Resource>(ALL);
+                    Debug::getInstance().registerClass<DistributedLock::Resource>(ALL);
 
                     this->start();
                 }
@@ -149,7 +149,7 @@ class DistributedLock : public ActionListener {
         CommHandler* ch;
         unsigned int id;
 
-        unsigned long int beacon_time   = 10; // ms 
+        unsigned long int beacon_time   = 50; // ms 
         unsigned int      sense_beacons = 3;
 
         unsigned int      retry_max     = 0; // undefined
@@ -182,14 +182,14 @@ class DistributedLock : public ActionListener {
 
         unsigned int getId();
 
-        static CommHandler* getCommHandlerInstance(unsigned int port);
+        static CommHandler* getCommHandlerInstance(std::string bcast_addr, unsigned int port);
 
         bool listenForPacket(unsigned long int wt);
 
     public:
-        DistributedLock(unsigned int id=0, unsigned int port=5000) {
+        DistributedLock(unsigned int id=0, unsigned int port=5000,unsigned int beacon_time = 50, std::string bcast_addr = "127.255.255.255") {
             try {
-                this->ch = DistributedLock::getCommHandlerInstance(port);
+                this->ch = DistributedLock::getCommHandlerInstance(bcast_addr,port);
             } catch (Exception& e) {
                 throw(e);
             }
@@ -200,6 +200,8 @@ class DistributedLock : public ActionListener {
             } else {
                 this->id = id;
             }
+
+            this->beacon_time = beacon_time;
        }
 
         ~DistributedLock() {
