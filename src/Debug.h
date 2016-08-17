@@ -75,7 +75,7 @@ class Debug {
                     if (this->log_mask == ALL) {
                         this->enabled = true;
                     } else if (this->log_mask == NONE) {
-                        this->enabled == false;
+                        this->enabled = false;
                     }
                     if (this->enabled) {
                         if (&o != NULL) {
@@ -124,10 +124,12 @@ class Debug {
                     return *this;
                 }	
                 Debug::CoutBase& operator<< (const LogType l) {
-                    if (this->log_mask & l) {
-                        this->setEnabled(true);
-                    } else {
-                        this->setEnabled(false);
+                    if (this->log_mask != ALL) {
+                        if (this->log_mask & l) {
+                            this->setEnabled(true);
+                        } else {
+                            this->setEnabled(false);
+                        }
                     }
                     return *this;
                 }
@@ -173,6 +175,7 @@ class Debug {
             } else {
                 this->reg[type]->setLogMask(log_mask);
             }
+            //std::cout << type << std::endl;
         }
 
         static Debug& getInstance() {

@@ -4,8 +4,8 @@
  *
  * Author        : Juan Carlos Maureira
  * Created       : Wed 09 Dec 2015 04:09:39 PM CLT
- * Last Modified : Wed 17 Aug 2016 11:38:09 AM CLT
- * Last Modified : Wed 17 Aug 2016 11:38:09 AM CLT
+ * Last Modified : Wed 17 Aug 2016 12:00:38 PM CLT
+ * Last Modified : Wed 17 Aug 2016 12:00:38 PM CLT
  *
  * (c) 2015-2016 Juan Carlos Maureira
  * (c) 2016      Andrew Hart
@@ -132,10 +132,9 @@ bool DistributedLock::Resource::isAcquirable() {
         }
     }
 
-    //debug << "current members " << num_members << " count " << this->count << std::endl;
-    return true;
+    debug << "current members " << num_members << " count " << this->count << std::endl;
 
-    //return (num_members < this->count);
+    return (num_members < this->count);
 }
 
 void DistributedLock::Resource::reset() {
@@ -326,13 +325,14 @@ void DistributedLock::actionPerformed(ActionEvent* evt) {
                 std::lock_guard<std::mutex> lock(this->update_m);
                 Resource* resource = this->getResource(res);
                 if (resource != NULL) {
+                    if (resource->getState()!=Resource::IDLE) {
+                        Resource::State state = (Resource::State)pkt->getState();
+                        resource->updateMember(pkt->getMemberId(), state, pkt->getCount());
+                    }
+
                     if (pkt->getState() == Resource::ACQUIRING) {
                         listen_cv.notify_one();
 
-                        if (resource->getState()!=Resource::IDLE) {
-                            Resource::State state = (Resource::State)pkt->getState();
-                            resource->updateMember(pkt->getMemberId(), state, pkt->getCount());
-                        }
                         if (resource->getState() == Resource::ACQUIRING || resource->getState() == Resource::ACQUIRED) {
                             cv.notify_one();
                         }
