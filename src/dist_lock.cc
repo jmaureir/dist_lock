@@ -88,10 +88,7 @@ int main(int argc, char **argv) {
     std::map<std::string,unsigned int> res_map;
  
 // Get executable name
-    std::string name(argv[0]);
-    size_t slashPos = name.rfind('/');
-    if (slashPos!=std::string::npos)
-        name = name.substr(slashPos+1);
+    std::string name(basename(std::string(argv[0]).c_str()));
 
 // Process command-line arguments
     while ((c = getopt (argc, argv, "hvr:n:p:")) != -1) {
