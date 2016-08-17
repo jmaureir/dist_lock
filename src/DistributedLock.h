@@ -4,7 +4,7 @@
  *
  * Author        : Juan Carlos Maureira
  * Created       : Wed 09 Dec 2015 04:07:14 PM CLT
- * Last Modified : Wed 17 Aug 2016 10:40:31 AM CLT
+ * Last Modified : Wed 17 Aug 2016 11:23:58 AM CLT
  *
  * (c) 2015-2016 Juan Carlos Maureira
  * (c) 2016      Andrew Hart
@@ -117,6 +117,7 @@ class DistributedLock : public ActionListener {
 
                 void setState(State s) {
                     this->state = s;
+                    this->sendBeacon();
                     this->beacon_cv.notify_all();
                 }
 
@@ -124,6 +125,8 @@ class DistributedLock : public ActionListener {
 
                 void updateMember(unsigned int id, State state, unsigned int count);
                 bool isAcquirable();
+                void sendBeacon();
+
 
                 friend std::ostream& operator << (std::ostream& os, Resource& obj) {
                     os << obj.name << ", " << obj.state << ", " << obj.members.size() << "[";
@@ -144,7 +147,7 @@ class DistributedLock : public ActionListener {
         CommHandler* ch;
         unsigned int id;
 
-        unsigned long int beacon_time   = 50; // ms 
+        unsigned long int beacon_time   = 10; // ms 
         unsigned int      sense_beacons = 3;
 
         unsigned int      retry_max     = 0; // undefined

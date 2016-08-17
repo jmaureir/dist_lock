@@ -4,8 +4,8 @@
  *
  * Author        : Juan Carlos Maureira
  * Created       : Wed 09 Dec 2015 04:09:39 PM CLT
- * Last Modified : Wed 17 Aug 2016 10:51:57 AM CLT
- * Last Modified : Wed 17 Aug 2016 10:51:57 AM CLT
+ * Last Modified : Wed 17 Aug 2016 11:22:30 AM CLT
+ * Last Modified : Wed 17 Aug 2016 11:22:30 AM CLT
  *
  * (c) 2015-2016 Juan Carlos Maureira
  * (c) 2016      Andrew Hart
@@ -32,10 +32,19 @@ CommHandler* DistributedLock::getCommHandlerInstance(unsigned int port) {
 }
 
 /* Resource Implementation */
+
+void DistributedLock::Resource::sendBeacon() {
+    unsigned int id = this->parent->getId();
+
+    DLPacket* beacon_pkt = new DLPacket(this->state,id);
+
+    beacon_pkt->setResource(this->name);
+    beacon_pkt->setCount(this->count);
+    this->parent->ch->send(beacon_pkt);
+}
+
 void DistributedLock::Resource::run() {
     std::unique_lock<std::mutex> lk(cv_m);
-
-    unsigned int id = this->parent->getId();
 
     while (this->running) {
 
@@ -43,12 +52,7 @@ void DistributedLock::Resource::run() {
             std::unique_lock<std::mutex> lock(beacon_m);
             this->beacon_cv.wait(lock);
         } else {
-
-            DLPacket* beacon_pkt = new DLPacket(this->state,id);
-
-            beacon_pkt->setResource(this->name);
-            beacon_pkt->setCount(this->count);
-            this->parent->ch->send(beacon_pkt);
+            this->sendBeacon();
         }
         if (cv.wait_for(lk, std::chrono::milliseconds(this->parent->beacon_time)) != std::cv_status::timeout) {
             break;
