@@ -20,3 +20,5 @@ test-driver
 ar-lib
 libtool
 stamp-h1
+*.log
+*.trs
