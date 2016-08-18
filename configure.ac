@@ -1,4 +1,4 @@
-AC_INIT([dist_lock], [1.0], [jcm@dim.uchile.cl], [dist_lock], [jcm@dim.uchile.cl])
+AC_INIT([dist_lock], [1.1], [jcm@dim.uchile.cl], [dist_lock], [jcm@dim.uchile.cl])
 AC_PREREQ([2.59])
 AC_CONFIG_SRCDIR([test/main.cc])
 AM_INIT_AUTOMAKE([1.10 -Wall no-define foreign])
