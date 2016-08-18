@@ -3,7 +3,7 @@
  *
  * Author        : Juan Carlos Maureira
  * Created       : Wed 09 Dec 2015 03:12:59 PM CLT
- * Last Modified : Wed 17 Aug 2016 04:14:53 PM CLT
+ * Last Modified : Thu 18 Aug 2016 11:15:09 AM CLT
  *
  * (c) 2015-2016 Juan Carlos Maureira
  * (c) 2016      Andrew Hart
@@ -20,7 +20,7 @@
 #include "DistributedLock.h"
 #include "StringTokenizer.h"
 
-#define VERSION "1.0.0"
+#define VERSION "1.1.0"
 
 int usage(std::string& name) {
     std::cerr << "usage: " << name << " [-h] [-v] [ -b beacon_time] -r resource1[:count1] ";
@@ -32,7 +32,7 @@ int usage(std::string& name) {
 }
 
 int showVersion(std::string& name) {
-    std::cerr << name << VERSION << std::endl;
+    std::cerr << name << " " << VERSION << std::endl;
     return 0;
 }
 
