@@ -5,7 +5,7 @@
  *
  * Author        : Juan Carlos Maureira
  * Created       : Wed 09 Dec 2015 03:12:59 PM CLT
- * Last Modified : Tue 16 Aug 2016 11:33:32 AM CLT
+ * Last Modified : Thu 18 Aug 2016 10:24:21 AM CLT
  *
  * (c) 2015 Juan Carlos Maureira
  */
@@ -80,8 +80,7 @@ int main(int argc, char **argv) {
         resourceCount = atoi(argv[2]);
     }
  
-std::cout << "max jobs "  << max_jobs << ";  resource count "  << resourceCount << std::endl;
- 
+    std::cout << "max jobs "  << max_jobs << ";  resource count "  << resourceCount << std::endl;
 
     for(int i=0;i<max_jobs;i++) {
         jobs.push_back(std::thread(job, i+1, resourceCount));

@@ -35,13 +35,17 @@ bin_PROGRAMS        =   dist_lock
 dist_lock_SOURCES   =   src/dist_lock.cc 
 dist_lock_LDADD     =   libdist_lock.la
 
-TESTS               =   test_base_1 test_base_2
-check_PROGRAMS      =   test_base_1 test_base_2
+TESTS               =   test_base_1 test_base_2 test_base_3
+check_PROGRAMS      =   test_base_1 test_base_2 test_base_3
+
 test_base_1_SOURCES =   test/main.cc
 test_base_1_LDADD   =   libdist_lock.la
 
 test_base_2_SOURCES =   test/main_multi.cc
 test_base_2_LDADD   =   libdist_lock.la
+
+test_base_3_SOURCES =   test/main_count.cc
+test_base_3_LDADD   =   libdist_lock.la
 
 TESTS              +=   test/test_10.sh test/test_200.sh
 EXTRA_DIST          =   test/test_10.sh test/test_200.sh
