@@ -19,8 +19,14 @@
 #include "CommHandler.h"
 #include "DistributedLock.h"
 #include "StringTokenizer.h"
-
+// Version number and default parameter values
 #define VERSION "1.1.0"
+#define BROADCASTADDRESS "127.255.255.255"
+#define PORT 5000
+#define BEACONTIME 50
+#define RETRYNUM 0
+#define RESOURCECOUNT 1
+
 
 const std::string usage_msg(R"(
 usage: %NAME% [-h] [-v] [-b beacon_time] [-B broadcast_network] [-p port]
@@ -63,18 +69,18 @@ available whenever no count is  specified.
 
 -n max-tries
 The number of times to try acquiring the specified resource(s) before giving up 
-and failing. The default value is 0, which means that no limit is placed on the 
+and failing. The default value is %RETRYNUM%, which means that no limit is placed on the 
 number of attempts to acquire the resource(s).
 
 -p port
 The port to be used by the distributed lock protocol. The default 
-port is 5000.
+port is %PORT%.
 
 -b beacon_time
-Interval in milliseconds between beacon packets.  The default is ?.
+Interval in milliseconds between beacon packets.  The default is %BEACONTIME%.
 
 -B broadcast_network
-Address of network to use for communication.  The default is ?.
+Address of network to use for communication.  The default is %BROADCASTADDRESS%.
 )");
 std::string& stringReplace(std::string& s, const std::string& from, const std::string& to)
 {
@@ -94,7 +100,7 @@ int usage(std::string& name) {
 }
 
 int showVersion(std::string& name) {
-    std::cerr << name << " " << VERSION << std::endl;
+    std::cout << name << " " << VERSION << std::endl;
     return 0;
 }
 
@@ -102,7 +108,11 @@ int showHelp(std::string& name) {
     std::string msg(help_msg);
     msg = stringReplace(msg, "%USAGE%", usage_msg);	
     msg = stringReplace(msg, "%NAME%", name);	
-		std::cout << msg << std::endl;
+    msg = stringReplace(msg, "%BEACONTIME%", std::to_string(BEACONTIME));	
+    msg = stringReplace(msg, "%PORT%", std::to_string(PORT));	
+    msg = stringReplace(msg, "%BROADCASTADDRESS%", BROADCASTADDRESS);	
+    msg = stringReplace(msg, "%RETRYNUM%", std::to_string(RETRYNUM));	
+    std::cout << msg << std::endl;
     return 0;
 }
 
@@ -113,10 +123,10 @@ int main(int argc, char **argv) {
     int c;
 
     int status = 0;
-    unsigned int port = 5000;
-    unsigned int retry_num = 0;   
-    unsigned int beacon_time = 50; // ms
-    std::string  bcast_addr  = "127.255.255.255";
+    unsigned int port = PORT;
+    unsigned int retry_num = RETRYNUM;   
+    unsigned int beacon_time = BEACONTIME; // ms
+    std::string  bcast_addr  = BROADCASTADDRESS;
 
     std::map<std::string,unsigned int> res_map;
  
