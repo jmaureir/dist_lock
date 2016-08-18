@@ -3,7 +3,7 @@
  *
  * Author        : Juan Carlos Maureira
  * Created       : Wed 09 Dec 2015 03:12:59 PM CLT
- * Last Modified : Thu 18 Aug 2016 11:15:09 AM CLT
+ * Last Modified : Thu 18 Aug 2016 11:31:15 AM CLT
  *
  * (c) 2015-2016 Juan Carlos Maureira
  * (c) 2016      Andrew Hart
@@ -124,6 +124,8 @@ int main(int argc, char **argv) {
                             exit(1);
                         }
                         res_map[resource] = count;
+                    } else {
+                        res_map[resource] = 1;
                     }
 
                 } else {
