@@ -4,8 +4,8 @@
  *
  * Author        : Juan Carlos Maureira
  * Created       : Wed 09 Dec 2015 04:09:39 PM CLT
- * Last Modified : Thu 18 Aug 2016 10:22:10 AM CLT
- * Last Modified : Thu 18 Aug 2016 10:22:10 AM CLT
+ * Last Modified : Thu 18 Aug 2016 10:56:40 AM CLT
+ * Last Modified : Thu 18 Aug 2016 10:56:40 AM CLT
  *
  * (c) 2015-2016 Juan Carlos Maureira
  * (c) 2016      Andrew Hart
@@ -15,7 +15,7 @@
 
 #include <thread>
 
-RegisterDebugClass(DistributedLock,ALL)
+RegisterDebugClass(DistributedLock,NONE)
 
 CommHandler* DistributedLock::s_ch = NULL;
 std::atomic<int> DistributedLock::s_ch_count;

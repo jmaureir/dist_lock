@@ -5,7 +5,7 @@
  *
  * Author        : Juan Carlos Maureira
  * Created       : Wed 17 Aug 2016 04:24:56 PM CLT
- * Last Modified : Wed 17 Aug 2016 04:59:05 PM CLT
+ * Last Modified : Thu 18 Aug 2016 10:47:57 AM CLT
  *
  * (c) 2015 Juan Carlos Maureira
  */
@@ -31,7 +31,7 @@ void job_single(int idx) {
 
     if (dl->acquire()) {
         std::cout << idx << " ***** resource R1 adquired ***** " << std::endl;
-        r1_count++;
+        r1_count.fetch_add(1);
         std::cout << idx << " R1:" << r1_count << std::endl;
 
         if (r1_count > max_r1) {
@@ -42,7 +42,7 @@ void job_single(int idx) {
         std::this_thread::sleep_for(std::chrono::milliseconds(1000));
 
         if (dl->releaseAll()) {
-            r1_count--;
+            r1_count.fetch_sub(1);
             std::cout << idx << " ***** resource R1 released ***** " << std::endl;
             std::cout << idx << " R1:" << r1_count << std::endl;
         }
@@ -64,8 +64,8 @@ void job_multi(int idx) {
     if (dl->acquire()) {
         std::cout << idx << " ***** resources R1 & R2 adquired ***** " << std::endl;
 
-        r1_count++;
-        r2_count++;
+        r1_count.fetch_add(1);
+        r2_count.fetch_add(1);
         std::cout << idx << " R1:" << r1_count << " R2:" << r2_count << std::endl;
 
         if (r1_count > max_r1) {
@@ -77,8 +77,8 @@ void job_multi(int idx) {
 
         if (dl->releaseAll()) {
             std::cout << idx << " ***** resource R1 & R2 released ***** " << std::endl;
-            r1_count--;
-            r2_count--;
+            r1_count.fetch_sub(1);
+            r2_count.fetch_sub(1);
             std::cout << idx << " R1:" << r1_count << " R2:" << r2_count << std::endl;
         }
     } else {
