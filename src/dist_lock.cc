@@ -22,12 +22,26 @@
 
 #define VERSION "1.1.0"
 
+const std::string usage_msg(R"(
+usage: %NAME% [-h] [-v] [-b beacon_time] [-B broadcast_network] [-p port]
+    [-n max_tries] -r resource1[:count1 [-r resource2[:count2] ...] --
+    command_to_execute [args ...]
+Use option -h for more detailed help.)");
+	
+
+std::string& stringReplace(std::string& s, const std::string& from, const std::string& to)
+{
+    if (!from.empty())
+        for (size_t pos=0; (pos=s.find(from, pos))!=std::string::npos; pos+=to.size())
+            s.replace(pos, from.size(), to);
+    return s;
+}
+
+
 int usage(std::string& name) {
-    std::cerr << "usage: " << name << " [-h] [-v] [ -b beacon_time] -r resource1[:count1] ";
-    std::cerr << "[-r resource2[:count2] ...]"<< std::endl;
-    std::cerr << "    [-n max_tries] [-p port] -- command_to_execute [args ...]"<< std::endl;
-	  std::cerr << std::endl;
-		std::cerr << "    Use option -h for more detailed help." << std::endl;
+    std::string msg(usage_msg);
+    msg = stringReplace(msg, "%NAME%", name);	
+    std::cerr << msg << std::endl;
 		return 1;
 }
 
