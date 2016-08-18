@@ -27,7 +27,7 @@ std::atomic<int> usedRes;
 void adjustShareFile(int idx, int boundary, int adj) {
 //    std::lock_guard<std::mutex> lock(sharedFile_m);
     int busy = usedRes.fetch_add(adj);
-    if (adj==0 || (adj>0 && busy <= boundary) || (adj<0 && busy>=boundary)) {
+    if (adj==0 || (adj>0 && busy<boundary) || (adj<0 && busy>boundary)) {
         std::cout << idx << " shared resource available (" << busy << " held)" << std::endl;
     } else {
         std::cout << idx << " ***** resource busy (" << busy << " held)!!! ***** " << std::endl;
