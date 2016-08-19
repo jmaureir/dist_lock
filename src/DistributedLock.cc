@@ -4,7 +4,7 @@
  *
  * Author        : Juan Carlos Maureira
  * Created       : Wed 09 Dec 2015 04:09:39 PM CLT
- * Last Modified : Thu 18 Aug 2016 09:34:58 PM CLT
+ * Last Modified : Thu 18 Aug 2016 09:49:48 PM CLT
  *
  * (c) 2015-2016 Juan Carlos Maureira
  * (c) 2016      Andrew Hart
@@ -198,9 +198,19 @@ bool DistributedLock::isBusy(std::string res) {
                 break;
             }
         }
+
+        // dispose returned list since it is a copy
+        for(auto it=m_list.begin();it!=m_list.end();) {
+            Resource::Member* m = (*it).second;
+            m_list.erase(it++);
+            delete(m);
+        }
+
     } catch(Exception& e) {
-        return ret;
+        std::cerr << e.what() << std::endl;
     }
+
+
     return ret;
 }
 
