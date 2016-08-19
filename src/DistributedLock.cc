@@ -4,7 +4,7 @@
  *
  * Author        : Juan Carlos Maureira
  * Created       : Wed 09 Dec 2015 04:09:39 PM CLT
- * Last Modified : Thu 18 Aug 2016 09:49:48 PM CLT
+ * Last Modified : Fri 19 Aug 2016 12:44:45 PM CLT
  *
  * (c) 2015-2016 Juan Carlos Maureira
  * (c) 2016      Andrew Hart
@@ -13,6 +13,7 @@
 #include "DLPacket.h"
 
 #include <thread>
+#include <chrono>
 
 RegisterDebugClass(DistributedLock,NONE)
 
@@ -210,7 +211,6 @@ bool DistributedLock::isBusy(std::string res) {
         std::cerr << e.what() << std::endl;
     }
 
-
     return ret;
 }
 
@@ -296,15 +296,30 @@ DistributedLock::Resource::MemberList DistributedLock::query_lock(std::string re
 
     resource->setState(Resource::QUERYING);
 
-    auto adquiring_time = std::chrono::milliseconds(  this->beacon_time  * this->sense_beacons );
+    auto long_listen_time = this->beacon_time * 2 * this->max_backoff;
+
+    auto short_listen_time = this->beacon_time * (this->sense_beacons + 1);
+
     Resource::MemberList n_list;
 
-    std::unique_lock<std::mutex> lk(cv_m);
-    if (cv.wait_for(lk, adquiring_time) == std::cv_status::timeout) {
-        debug << "full querying complete" << std::endl;
+    if (!this->listenForPacket(short_listen_time)) {
+        debug << "short listen complete" << std::endl;
     } else {
-        debug << "full querying early complete" << std::endl;
-    }
+        while (long_listen_time > 0) {
+            const auto start = std::chrono::system_clock::now();
+            debug << "short listen interrupted. extending for " << long_listen_time << std::endl;
+            if (!this->listenForPacket(long_listen_time)) {
+                debug << "long listen complete" << std::endl;
+                break;
+            } else {
+                debug << "long listen time interrupted" << std::endl;
+                const auto stop = std::chrono::system_clock::now();
+                double elapsed = std::chrono::duration_cast<std::chrono::milliseconds>(stop - start).count();
+                long_listen_time = long_listen_time - elapsed;
+                
+            }
+        }
+   }
   
     Resource::MemberList& m_list = resource->getMemberList();
     for(auto it=m_list.begin();it!=m_list.end();it++) {
@@ -328,6 +343,8 @@ bool DistributedLock::adquire_lock(std::string res) {
     if (resource == NULL) {
         resource = createResource(res);
     }
+
+    resource->setState(Resource::STARTING);
 
     while((this->retry_max == 0) || retry < this->retry_max) {
 
@@ -357,7 +374,7 @@ bool DistributedLock::adquire_lock(std::string res) {
 
             retry++;
         }
-        unsigned long int backoff_time = (this->beacon_time * 2 * this->sense_beacons) * (1+dist(rng)) ;
+        unsigned long int backoff_time = (this->beacon_time * this->max_backoff) * (1+dist(rng)) ;
         //debug << this->id << " failed attempt to adquire " << res << " backoff " << backoff_time << std::endl;
         //std::this_thread::sleep_for(std::chrono::milliseconds(backoff_time));
         std::unique_lock<std::mutex> bk_lk(cv_m);
@@ -379,6 +396,11 @@ bool DistributedLock::adquire_lock() {
     if (this->resources.size() == 0) {
         debug << "no resources defined" << std::endl;
         return false;
+    }
+
+    for(auto it=this->resources.begin();it!=this->resources.end();it++) {
+        Resource* resource = (*it).second;
+        resource->setState(Resource::STARTING);
     }
 
     while((this->retry_max == 0) || retry < this->retry_max) {
@@ -464,7 +486,7 @@ void DistributedLock::actionPerformed(ActionEvent* evt) {
                         resource->updateMember(pkt->getMemberId(), state, pkt->getCount());
                     }
 
-                    if (pkt->getState() == Resource::ACQUIRING) {
+                    if (pkt->getState() == Resource::ACQUIRING || pkt->getState() == Resource::STARTING) {
                         listen_cv.notify_one();
 
                         if (resource->getState() == Resource::ACQUIRING || resource->getState() == Resource::ACQUIRED) {

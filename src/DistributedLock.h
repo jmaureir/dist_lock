@@ -4,7 +4,7 @@
  *
  * Author        : Juan Carlos Maureira
  * Created       : Wed 09 Dec 2015 04:07:14 PM CLT
- * Last Modified : Thu 18 Aug 2016 09:33:38 PM CLT
+ * Last Modified : Fri 19 Aug 2016 12:32:29 PM CLT
  *
  * (c) 2015-2016 Juan Carlos Maureira
  * (c) 2016      Andrew Hart
@@ -16,7 +16,6 @@
 #include "CommHandler.h"
 #include "Debug.h"
 
-
 #include <random>
 #include <climits>
 #include <condition_variable>
@@ -26,16 +25,20 @@
 #include <ratio>
 #include <chrono>
 
+#define MAX_BACKOFF      6
+#define SENSE_BEACONS    3
+
 class DistributedLock : public ActionListener {
     private:
         class Resource : public Thread, public Observable {
             public:
                 enum State {
                     IDLE          = 0,
-                    ACQUIRING     = 1,
-                    ACQUIRED      = 2,
-                    RELEASED      = 3,
-                    QUERYING      = 4,
+                    STARTING      = 1,
+                    ACQUIRING     = 2,
+                    ACQUIRED      = 3,
+                    RELEASED      = 4,
+                    QUERYING      = 5,
                 };
 
                 struct Member {
@@ -160,7 +163,8 @@ class DistributedLock : public ActionListener {
         unsigned int id;
 
         unsigned long int beacon_time   = 50; // ms 
-        unsigned int      sense_beacons = 3;
+        unsigned int      sense_beacons = SENSE_BEACONS;
+        unsigned int      max_backoff   = MAX_BACKOFF;
 
         unsigned int      retry_max     = 0; // undefined
 
