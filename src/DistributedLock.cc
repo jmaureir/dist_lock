@@ -4,7 +4,7 @@
  *
  * Author        : Juan Carlos Maureira
  * Created       : Wed 09 Dec 2015 04:09:39 PM CLT
- * Last Modified : Thu 18 Aug 2016 11:04:56 AM CLT
+ * Last Modified : Thu 18 Aug 2016 09:34:58 PM CLT
  *
  * (c) 2015-2016 Juan Carlos Maureira
  * (c) 2016      Andrew Hart
@@ -68,7 +68,7 @@ void DistributedLock::Resource::run() {
 }
 
 void DistributedLock::Resource::updateMember(unsigned int id, State state, unsigned int count) {
-    if (this->count == count) {
+    if (this->count == count || this->state == QUERYING) {
         // only account the members reporting the same count number
         Member* m = this->getMember(id);
         if (m==NULL) {
@@ -186,6 +186,24 @@ bool DistributedLock::release(std::string res) {
     return true;
 }
 
+bool DistributedLock::isBusy(std::string res) {
+    bool ret = false;
+    try {
+        Resource::MemberList m_list = this->query_lock(res);
+
+        for(auto it=m_list.begin();it!=m_list.end();it++) {
+            Resource::Member* m = (*it).second;
+            if (m->state == Resource::ACQUIRED) {
+                ret = true;
+                break;
+            }
+        }
+    } catch(Exception& e) {
+        return ret;
+    }
+    return ret;
+}
+
 bool DistributedLock::releaseAll() {
     bool r = true;
     for(auto it=this->resources.begin();it!=this->resources.end();it++) {
@@ -254,8 +272,39 @@ void DistributedLock::release_lock(std::string res) {
     }
 }
 
-void DistributedLock::query_lock(std::string res) {
-    // TODO: to be implemented
+DistributedLock::Resource::MemberList DistributedLock::query_lock(std::string res) {
+    std::mt19937 rng;
+    rng.seed(std::random_device()());
+    std::uniform_real_distribution<> dist(0,1);
+
+    unsigned int retry = 0;
+
+    Resource* resource = this->getResource(res);
+    if (resource == NULL) {
+        resource = createResource(res);
+    }
+
+    resource->setState(Resource::QUERYING);
+
+    auto adquiring_time = std::chrono::milliseconds(  this->beacon_time  * this->sense_beacons );
+    Resource::MemberList n_list;
+
+    std::unique_lock<std::mutex> lk(cv_m);
+    if (cv.wait_for(lk, adquiring_time) == std::cv_status::timeout) {
+        debug << "full querying complete" << std::endl;
+    } else {
+        debug << "full querying early complete" << std::endl;
+    }
+  
+    Resource::MemberList& m_list = resource->getMemberList();
+    for(auto it=m_list.begin();it!=m_list.end();it++) {
+        Resource::Member* m_o = (*it).second;
+        Resource::Member* m = new Resource::Member(*m_o);
+        // debug << "m " << m->id << " " << m->state << " " << m << " " << m_o << std::endl;
+        n_list[m->id] = m;
+    }
+
+    return n_list;
 }
 
 bool DistributedLock::adquire_lock(std::string res) {
@@ -401,6 +450,7 @@ void DistributedLock::actionPerformed(ActionEvent* evt) {
                 if (resource != NULL) {
                     if (resource->getState()!=Resource::IDLE) {
                         Resource::State state = (Resource::State)pkt->getState();
+
                         resource->updateMember(pkt->getMemberId(), state, pkt->getCount());
                     }
 

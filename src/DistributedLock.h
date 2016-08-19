@@ -4,7 +4,7 @@
  *
  * Author        : Juan Carlos Maureira
  * Created       : Wed 09 Dec 2015 04:07:14 PM CLT
- * Last Modified : Wed 17 Aug 2016 04:32:13 PM CLT
+ * Last Modified : Thu 18 Aug 2016 09:33:38 PM CLT
  *
  * (c) 2015-2016 Juan Carlos Maureira
  * (c) 2016      Andrew Hart
@@ -35,6 +35,7 @@ class DistributedLock : public ActionListener {
                     ACQUIRING     = 1,
                     ACQUIRED      = 2,
                     RELEASED      = 3,
+                    QUERYING      = 4,
                 };
 
                 struct Member {
@@ -46,6 +47,12 @@ class DistributedLock : public ActionListener {
                         this->count = 0;
                         this->tp = std::chrono::system_clock::now();
                         this->state = IDLE;
+                    }
+                    Member(const Member& m) {
+                        this->id    = m.id;
+                        this->tp    = m.tp;
+                        this->count = m.count;
+                        this->state = m.state;
                     }
                 };
 
@@ -86,7 +93,7 @@ class DistributedLock : public ActionListener {
 
                     this->tp         = std::chrono::system_clock::now();
 
-                    Debug::getInstance().registerClass<DistributedLock::Resource>(ALL);
+                    //Debug::getInstance().registerClass<DistributedLock::Resource>(ALL);
 
                     this->start();
                 }
@@ -125,10 +132,13 @@ class DistributedLock : public ActionListener {
 
                 void reset();
 
+                MemberList& getMemberList() {
+                    return this->members;
+                }
+
                 void updateMember(unsigned int id, State state, unsigned int count);
                 bool isAcquirable();
                 void sendBeacon();
-
 
                 friend std::ostream& operator << (std::ostream& os, Resource& obj) {
                     os << obj.name << ", " << obj.state << ", " << obj.members.size() << "[";
@@ -178,7 +188,7 @@ class DistributedLock : public ActionListener {
         bool adquire_lock();
 
         void release_lock(std::string res);
-        void query_lock(std::string res);
+        Resource::MemberList query_lock(std::string res);
 
         unsigned int getRandomId();
 
@@ -232,6 +242,8 @@ class DistributedLock : public ActionListener {
         bool acquire(std::string resource="");
         bool release(std::string resource);
         bool releaseAll();
+
+        bool isBusy(std::string resource);
 
         bool defineResource(std::string resource,unsigned int count=1);
     

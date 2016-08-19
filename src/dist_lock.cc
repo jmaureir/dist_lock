@@ -3,7 +3,7 @@
  *
  * Author        : Juan Carlos Maureira
  * Created       : Wed 09 Dec 2015 03:12:59 PM CLT
- * Last Modified : Thu 18 Aug 2016 11:31:15 AM CLT
+ * Last Modified : Thu 18 Aug 2016 09:34:25 PM CLT
  *
  * (c) 2015-2016 Juan Carlos Maureira
  * (c) 2016      Andrew Hart
@@ -23,12 +23,9 @@
 #define VERSION "1.1.0"
 
 int usage(std::string& name) {
-    std::cerr << "usage: " << name << " [-h] [-v] [ -b beacon_time] -r resource1[:count1] ";
-    std::cerr << "[-r resource2[:count2] ...]"<< std::endl;
-    std::cerr << "    [-n max_tries] [-p port] -- command_to_execute [args ...]"<< std::endl;
-	  std::cerr << std::endl;
-		std::cerr << "    Use option -h for more detailed help." << std::endl;
-		return 1;
+    std::cout << "usage: " << name << " [-h] [-v] [ -b beacon_time] { -q resource | -r resource1[:count1] [-r resource2[:count2] ...] [-n max_tries] [-p port] -- command_to_execute [args ...]"<< std::endl;
+    std::cout << "Use option -h for more detailed help." << std::endl;
+	return 1;
 }
 
 int showVersion(std::string& name) {
@@ -84,9 +81,9 @@ int main(int argc, char **argv) {
     std::string resource;
     int c;
 
-    int status = 0;
-    unsigned int port = 5000;
-    unsigned int retry_num = 0;   
+    bool         query       = false;
+    unsigned int port        = 5000;
+    unsigned int retry_num   = 0;   
     unsigned int beacon_time = 50; // ms
     std::string  bcast_addr  = "127.255.255.255";
 
@@ -96,7 +93,7 @@ int main(int argc, char **argv) {
     std::string name(basename(std::string(argv[0]).c_str()));
 
     // Process command-line arguments
-    while ((c = getopt (argc, argv, "hvr:n:p:b:B:")) != -1) {
+    while ((c = getopt (argc, argv, "hvr:n:p:b:B:q:")) != -1) {
         switch (c) {
             case 'h':
         		    return showHelp(name);
@@ -110,6 +107,13 @@ int main(int argc, char **argv) {
             case 'B':
                     bcast_addr = optarg;
         		    break;
+            case 'q':
+                if (optarg!=NULL && strlen(optarg) > 0 ) {
+                    resource = std::string(optarg);
+                    query = true;
+                    res_map[resource] = 1;
+                }
+                break;
             case 'r':
                 if (optarg!=NULL && strlen(optarg) > 0 ) {
                     resource = std::string(optarg);
@@ -123,7 +127,7 @@ int main(int argc, char **argv) {
                             std::cerr << "resource counter must be an integer greater than 0" << std::endl;
                             exit(1);
                         }
-                        res_map[resource] = count;
+                        res_map[r] = count;
                     } else {
                         res_map[resource] = 1;
                     }
@@ -174,56 +178,67 @@ int main(int argc, char **argv) {
         return 3;
     }
 
+    int status = 0;
 
-    // check command to execute
-    std::stringstream cmd;
+    if (!query) { 
 
-    if (optind > 0) {
-        if ((strcmp(argv[optind-1],"--")==0) && (argc - optind > 0)) {
-            for (unsigned int i=optind;i < argc;i++) {
-                cmd << argv[i] << " ";
+        // check command to execute
+        std::stringstream cmd;
+
+        if (optind > 0) {
+            if ((strcmp(argv[optind-1],"--")==0) && (argc - optind > 0)) {
+                for (unsigned int i=optind;i < argc;i++) {
+                    cmd << argv[i] << " ";
+                }
+     
+            } else {
+                std::cerr << "No command specified." << std::endl;
+                return 2;
             }
- 
         } else {
-            std::cerr << "No command specified." << std::endl;
-            return 2;
+            return usage(name);
+        }
+     
+        if (dl->acquire()) {
+            std::cout << "Resource acquired!" << std::endl;
+            std::cout << "Executing: " << cmd.str() << std::endl;
+            pid_t pid;
+
+
+            pid = fork();
+
+            if (pid == 0) {
+                int r = execl("/bin/sh", "sh", "-c", cmd.str().c_str(), NULL);
+                return r;
+            } else  if (pid < 0) {
+                std::cerr << "error forking the process." << std::endl;
+                return 4;
+            } else {
+                if (waitpid (pid, &status, 0) != pid) {
+                    std::cerr << "error waiting for process." << std::endl;
+                }
+                if ( WIFEXITED(status) ) {
+                    int exit_code = WEXITSTATUS(status);
+                    return exit_code;
+                }
+                return EXIT_FAILURE;
+            }
+        } else {
+            std::cerr << "Resource(s) not acquired." << std::endl;
+            return 5;
+        }
+
+        if (!dl->releaseAll()) {
+            std::cerr << "resource(s) not released" << std::endl;
         }
     } else {
-        return usage(name);
-    }
- 
-    if (dl->acquire(resource)) {
-        std::cout << "Resource acquired!" << std::endl;
-        std::cout << "Executing: " << cmd.str() << std::endl;
-        pid_t pid;
 
-        pid = fork();
-
-        if (pid == 0) {
-            int r = execl("/bin/sh", "sh", "-c", cmd.str().c_str(), NULL);
-            return r;
-        } else  if (pid < 0) {
-            std::cerr << "error forking the process." << std::endl;
-            return 4;
+        if (dl->isBusy(resource)) {
+            status = 1;
         } else {
-            if (waitpid (pid, &status, 0) != pid) {
-                std::cerr << "error waiting for process." << std::endl;
-            }
-            if ( WIFEXITED(status) ) {
-                int exit_code = WEXITSTATUS(status);
-                return exit_code;
-            }
-            return EXIT_FAILURE;
+            status = 0;
         }
-    } else {
-        std::cerr << "Resource(s) not acquired." << std::endl;
-        return 5;
     }
-
-    if (!dl->releaseAll()) {
-        std::cerr << "resource(s) not released" << std::endl;
-    }
-
     delete(dl);
 
     return status;
