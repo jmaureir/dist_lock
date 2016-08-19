@@ -3,7 +3,7 @@
  *
  * Author        : Juan Carlos Maureira
  * Created       : Wed 09 Dec 2015 03:12:59 PM CLT
- * Last Modified : Thu 18 Aug 2016 09:40:49 PM CLT
+ * Last Modified : Thu 18 Aug 2016 09:55:56 PM CLT
  *
  * (c) 2015-2016 Juan Carlos Maureira
  * (c) 2016      Andrew Hart
@@ -30,7 +30,7 @@
 
 const std::string usage_msg(R"(
 usage: %NAME% [-h] [-v] [-b beacon_time] [-B broadcast_network] [-p port]
-    [-n max_tries] -r resource1[:count1 [-r resource2[:count2] ...] --
+    [-n max_tries] {-q resource | -r resource1[:count1 [-r resource2[:count2] ...]} --
     command_to_execute [args ...]
 )");
 
@@ -122,10 +122,10 @@ int main(int argc, char **argv) {
     int c;
 
     bool         query       = false;
-    unsigned int port        = 5000;
-    unsigned int retry_num   = 0;   
-    unsigned int beacon_time = 50; // ms
-    std::string  bcast_addr  = "127.255.255.255";
+    unsigned int port        = PORT;
+    unsigned int retry_num   = RETRYNUM;   
+    unsigned int beacon_time = BEACONTIME; // ms
+    std::string  bcast_addr  = BROADCASTADDRESS;
 
     std::map<std::string,unsigned int> res_map;
  
@@ -169,7 +169,7 @@ int main(int argc, char **argv) {
                         }
                         res_map[r] = count;
                     } else {
-                        res_map[resource] = 1;
+                        res_map[resource] = RESOURCECOUNT;
                     }
 
                 } else {
