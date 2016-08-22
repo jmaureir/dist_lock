@@ -4,7 +4,7 @@
  *
  * Author        : Juan Carlos Maureira
  * Created       : Wed 09 Dec 2015 04:09:39 PM CLT
- * Last Modified : Fri 19 Aug 2016 06:54:14 PM CLT
+ * Last Modified : Mon 22 Aug 2016 12:51:51 PM CLT
  *
  * (c) 2015-2016 Juan Carlos Maureira
  * (c) 2016      Andrew Hart
@@ -56,6 +56,8 @@ void DistributedLock::Resource::run() {
 
     while (this->running) {
 
+        this->started_cv.notify_all();
+
         if (this->state == IDLE) {
             std::unique_lock<std::mutex> lock(beacon_m);
             this->beacon_cv.wait(lock);
@@ -68,6 +70,13 @@ void DistributedLock::Resource::run() {
     }
 
     //debug << "Resource thread finished" << std::endl;
+}
+
+void DistributedLock::Resource::waitForReady() {
+        
+    std::unique_lock<std::mutex> lk(this->started_m);
+    this->started_cv.wait(lk);
+
 }
 
 void DistributedLock::Resource::updateMember(unsigned int id, State state, unsigned int count) {
@@ -216,6 +225,30 @@ bool DistributedLock::isBusy(std::string res) {
     return ret;
 }
 
+bool DistributedLock::isAny(std::string res) {
+    bool ret = false;
+    try {
+        Resource::MemberList m_list = this->query_lock(res);
+
+        if (m_list.size() > 0) {
+            ret = true;
+        }
+
+        // dispose returned list since it is a copy
+        for(auto it=m_list.begin();it!=m_list.end();) {
+            Resource::Member* m = (*it).second;
+            m_list.erase(it++);
+            delete(m);
+        }
+
+    } catch(Exception& e) {
+        std::cerr << e.what() << std::endl;
+    }
+
+    return ret;
+}
+
+
 bool DistributedLock::releaseAll() {
     bool r = true;
     for(auto it=this->resources.begin();it!=this->resources.end();it++) {
@@ -346,7 +379,6 @@ bool DistributedLock::adquire_lock(std::string res) {
         resource = createResource(res);
     }
 
-
     while((this->retry_max == 0) || retry < this->retry_max) {
         resource->setState(Resource::STARTING);
 
@@ -396,6 +428,14 @@ bool DistributedLock::adquire_lock() {
     if (this->resources.size() == 0) {
         debug << "no resources defined" << std::endl;
         return false;
+    }
+
+    // wait for resources to start beaconing thrad.
+
+    for(auto it=this->resources.begin();it!=this->resources.end();it++) {
+        Resource* resource = (*it).second;
+        resource->setState(Resource::STARTING);
+        resource->waitForReady();
     }
 
     if (this->on_start) {

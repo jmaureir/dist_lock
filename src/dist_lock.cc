@@ -3,7 +3,7 @@
  *
  * Author        : Juan Carlos Maureira
  * Created       : Wed 09 Dec 2015 03:12:59 PM CLT
- * Last Modified : Mon 22 Aug 2016 11:09:05 AM CLT
+ * Last Modified : Mon 22 Aug 2016 12:29:25 PM CLT
  *
  * (c) 2015-2016 Juan Carlos Maureira
  * (c) 2016      Andrew Hart
@@ -133,6 +133,7 @@ int main(int argc, char **argv) {
     int c;
 
     bool         detach      = false;
+    bool         is_any      = false;
     bool         query       = false;
     unsigned int port        = PORT;
     unsigned int retry_num   = RETRYNUM;   
@@ -145,7 +146,7 @@ int main(int argc, char **argv) {
     std::string name(basename(std::string(argv[0]).c_str()));
 
     // Process command-line arguments
-    while ((c = getopt (argc, argv, "hvdr:n:p:b:B:q:")) != -1) {
+    while ((c = getopt (argc, argv, "hvdr:n:p:b:B:q:Q:")) != -1) {
         switch (c) {
             case 'd':
                     detach = true;
@@ -169,6 +170,14 @@ int main(int argc, char **argv) {
                     res_map[resource] = 1;
                 }
                 break;
+            case 'Q':
+                if (optarg!=NULL && strlen(optarg) > 0 ) {
+                    resource = std::string(optarg);
+                    is_any = true;
+                    res_map[resource] = 1;
+                }
+                break;
+
             case 'r':
                 if (optarg!=NULL && strlen(optarg) > 0 ) {
                     resource = std::string(optarg);
@@ -214,8 +223,10 @@ int main(int argc, char **argv) {
     pid_t pid_d = fork();
 
     if (pid_d==0) {
-    
-        setsid();
+
+        if (detach) {    
+            setsid();
+        }
 
         DistributedLock* dl = NULL;
 
@@ -243,8 +254,19 @@ int main(int argc, char **argv) {
             return 3;
         }
 
-        if (!query) { 
-
+        if (query && !is_any) { 
+            if (dl->isBusy(resource)) {
+                status = 1;
+            } else {
+                status = 0;
+            }
+        } else if (!query && is_any) {
+            if (dl->isAny(resource)) {
+                status = 1;
+            } else {
+                status = 0;
+            }
+        } else if (!query && !is_any) {
             // check command to execute
             std::stringstream cmd;
 
@@ -264,7 +286,6 @@ int main(int argc, char **argv) {
 
             dl->onStart([&] {
                 pid_t p = getppid();
-                std::cout << "notifying parent to exit " << p << std::endl;
                 kill(p,SIGUSR1); 
             });
          
@@ -301,11 +322,6 @@ int main(int argc, char **argv) {
             }
         } else {
 
-            if (dl->isBusy(resource)) {
-                status = 1;
-            } else {
-                status = 0;
-            }
         }
         delete(dl);
 

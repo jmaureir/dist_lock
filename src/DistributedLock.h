@@ -4,7 +4,7 @@
  *
  * Author        : Juan Carlos Maureira
  * Created       : Wed 09 Dec 2015 04:07:14 PM CLT
- * Last Modified : Fri 19 Aug 2016 06:54:12 PM CLT
+ * Last Modified : Mon 22 Aug 2016 12:24:49 PM CLT
  *
  * (c) 2015-2016 Juan Carlos Maureira
  * (c) 2016      Andrew Hart
@@ -67,6 +67,7 @@ class DistributedLock : public ActionListener {
                
                 std::condition_variable    cv;
                 std::mutex                 cv_m;
+
                 std::atomic<unsigned int>  owner;
                 std::atomic<State>         state; 
 
@@ -79,6 +80,9 @@ class DistributedLock : public ActionListener {
 
                 std::condition_variable    beacon_cv;
                 std::mutex                 beacon_m;
+
+                std::condition_variable    started_cv;
+                std::mutex                 started_m;
 
                 Member* getMember(unsigned int id);
                 Member* addMember(unsigned int id);
@@ -96,8 +100,6 @@ class DistributedLock : public ActionListener {
 
                     this->tp         = std::chrono::system_clock::now();
 
-                    //Debug::getInstance().registerClass<DistributedLock::Resource>(ALL);
-
                     this->start();
                 }
                 ~Resource() {
@@ -114,6 +116,7 @@ class DistributedLock : public ActionListener {
                 }
                 virtual void run();
                 virtual void stop();
+                void waitForReady();
 
                 State getState() {
                     return this->state;
@@ -257,6 +260,7 @@ class DistributedLock : public ActionListener {
         bool releaseAll();
 
         bool isBusy(std::string resource);
+        bool isAny(std::string resource);
 
         bool defineResource(std::string resource,unsigned int count=1);
     
