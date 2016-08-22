@@ -3,7 +3,7 @@
  *
  * Author        : Juan Carlos Maureira
  * Created       : Wed 09 Dec 2015 03:12:59 PM CLT
- * Last Modified : Mon 22 Aug 2016 12:29:25 PM CLT
+ * Last Modified : Mon 22 Aug 2016 03:50:19 PM CLT
  *
  * (c) 2015-2016 Juan Carlos Maureira
  * (c) 2016      Andrew Hart
@@ -33,8 +33,13 @@
 std::condition_variable parent_wait;
 std::mutex              parent_m;
 
+pid_t                   pid_d;
+
+bool detach_i = false;  // detach on initialization
+bool acquired = false;
+
 const std::string usage_msg(R"(
-usage: %NAME% [-h] [-v] [-b beacon_time] [-B broadcast_network] [-p port]
+usage: %NAME% [-h] [-v] [-d] [-b beacon_time] [-B broadcast_network] [-p port]
     [-n max_tries] {-q resource | -r resource1[:count1 [-r resource2[:count2] ...]} --
     command_to_execute [args ...]
 )");
@@ -97,7 +102,16 @@ std::string& stringReplace(std::string& s, const std::string& from, const std::s
 
 void signal_handler(int signal) {
     if (signal == SIGUSR1) {
-        parent_wait.notify_one();
+        acquired = true;
+        parent_wait.notify_all();
+    }
+    if (signal == SIGUSR2) {
+        acquired = false;
+        parent_wait.notify_all();
+    }
+
+    if (signal == SIGINT) {
+        kill(-pid_d,SIGKILL);
     }
 }
 
@@ -132,7 +146,6 @@ int main(int argc, char **argv) {
     std::string resource;
     int c;
 
-    bool         detach      = false;
     bool         is_any      = false;
     bool         query       = false;
     unsigned int port        = PORT;
@@ -149,7 +162,7 @@ int main(int argc, char **argv) {
     while ((c = getopt (argc, argv, "hvdr:n:p:b:B:q:Q:")) != -1) {
         switch (c) {
             case 'd':
-                    detach = true;
+                    detach_i = true;
         		    break;
             case 'h':
         		    return showHelp(name);
@@ -166,6 +179,7 @@ int main(int argc, char **argv) {
             case 'q':
                 if (optarg!=NULL && strlen(optarg) > 0 ) {
                     resource = std::string(optarg);
+                    is_any = false;
                     query = true;
                     res_map[resource] = 1;
                 }
@@ -173,6 +187,7 @@ int main(int argc, char **argv) {
             case 'Q':
                 if (optarg!=NULL && strlen(optarg) > 0 ) {
                     resource = std::string(optarg);
+                    query = false;
                     is_any = true;
                     res_map[resource] = 1;
                 }
@@ -217,14 +232,16 @@ int main(int argc, char **argv) {
     }
 
     signal(SIGUSR1, signal_handler);
+    signal(SIGUSR2, signal_handler);
+    signal(SIGINT, signal_handler);
 
     int status = 0;
 
-    pid_t pid_d = fork();
+    pid_d = fork();
 
     if (pid_d==0) {
 
-        if (detach) {    
+        if (detach_i) {    
             setsid();
         }
 
@@ -284,15 +301,23 @@ int main(int argc, char **argv) {
                 return usage(name);
             }
 
-            dl->onStart([&] {
-                pid_t p = getppid();
-                kill(p,SIGUSR1); 
-            });
+            if (detach_i && retry_num == 0) {
+                dl->onStart([&] {
+                    pid_t p = getppid();
+                    kill(p,SIGUSR1); 
+                });
+            }
          
             if (dl->acquire()) {
                 std::cout << "Resource acquired!" << std::endl;
                 std::cout << "Executing: " << cmd.str() << std::endl;
                 pid_t pid;
+
+                if (detach_i && retry_num > 0) {
+                    std::cout << "notifying parent about acquisition" << std::endl;
+                    pid_t p = getppid();
+                    kill(p,SIGUSR1); 
+                }
 
                 pid = fork();
 
@@ -314,37 +339,49 @@ int main(int argc, char **argv) {
                 }
             } else {
                 std::cerr << "Resource(s) not acquired." << std::endl;
+                if (detach_i) {
+                    pid_t p = getppid();
+                    kill(p,SIGUSR2); 
+                }
                 return 5;
             }
 
             if (!dl->releaseAll()) {
                 std::cerr << "resource(s) not released" << std::endl;
             }
-        } else {
-
         }
+        if (detach_i) {
+             pid_t p = getppid();
+             kill(p,SIGUSR2); 
+        }
+
         delete(dl);
 
         return status;
     } else {
 
-        if (detach) {
+        if (detach_i) {
+
             // wait the children to notify us to exit 
             std::unique_lock<std::mutex> lk(parent_m);
             parent_wait.wait(lk);
 
-        } else {
-            if (waitpid (pid_d, &status, 0) == pid_d) {
+            if (acquired) {
+                // "detaching process on initialization" 
+                return 0;
+            }
+        } 
 
-                if ( WIFEXITED(status) ) {
-                    status = WEXITSTATUS(status);
-                } else {
-                    status=EXIT_FAILURE;
-                }
+        if (waitpid (pid_d, &status, 0) == pid_d) {
+
+            if (WIFEXITED(status)) {
+                status = WEXITSTATUS(status);
             } else {
-                std::cerr << "error waiting for process." << std::endl;
                 status=EXIT_FAILURE;
             }
+        } else {
+            std::cerr << "error waiting for process." << std::endl;
+            status=EXIT_FAILURE;
         }
     }
     return status;

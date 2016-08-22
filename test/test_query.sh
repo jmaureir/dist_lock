@@ -13,8 +13,7 @@ idx=0
 
 function adquire() {
     re=$1
-    echo "adquiring $re"
-    $DIST_LOCK -d -r $RES1:5 -r $re -- $JOB $re 
+    $DIST_LOCK -d -r $RES1:3 -r $re -- $JOB $re 
 }
 
 while [ $CUR -le $MAX ]; 
