@@ -47,8 +47,8 @@ test_base_2_LDADD   =   libdist_lock.la
 test_base_3_SOURCES =   test/main_count.cc
 test_base_3_LDADD   =   libdist_lock.la
 
-TESTS              +=   test/test_10.sh test/test_200.sh
-EXTRA_DIST          =   test/test_10.sh test/test_200.sh
+TESTS              +=   test/test_10.sh test/test_200.sh test/test_1000.sh 
+EXTRA_DIST          =   test/test_10.sh test/test_200.sh test/delay_job.sh test/test_query.sh
 
 AM_LDFLAGS = @LDFLAGS@ $(CLOCK_LIB) $(PTHREAD_LIBS)
 

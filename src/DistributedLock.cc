@@ -4,7 +4,7 @@
  *
  * Author        : Juan Carlos Maureira
  * Created       : Wed 09 Dec 2015 04:09:39 PM CLT
- * Last Modified : Fri 19 Aug 2016 12:44:45 PM CLT
+ * Last Modified : Fri 19 Aug 2016 06:54:14 PM CLT
  *
  * (c) 2015-2016 Juan Carlos Maureira
  * (c) 2016      Andrew Hart
@@ -14,6 +14,8 @@
 
 #include <thread>
 #include <chrono>
+#include <unistd.h>
+
 
 RegisterDebugClass(DistributedLock,NONE)
 
@@ -302,13 +304,13 @@ DistributedLock::Resource::MemberList DistributedLock::query_lock(std::string re
 
     Resource::MemberList n_list;
 
-    if (!this->listenForPacket(short_listen_time)) {
+    if (!this->listenForAnyPacket(short_listen_time)) {
         debug << "short listen complete" << std::endl;
     } else {
         while (long_listen_time > 0) {
             const auto start = std::chrono::system_clock::now();
             debug << "short listen interrupted. extending for " << long_listen_time << std::endl;
-            if (!this->listenForPacket(long_listen_time)) {
+            if (!this->listenForAnyPacket(long_listen_time)) {
                 debug << "long listen complete" << std::endl;
                 break;
             } else {
@@ -319,7 +321,7 @@ DistributedLock::Resource::MemberList DistributedLock::query_lock(std::string re
                 
             }
         }
-   }
+    }
   
     Resource::MemberList& m_list = resource->getMemberList();
     for(auto it=m_list.begin();it!=m_list.end();it++) {
@@ -344,16 +346,15 @@ bool DistributedLock::adquire_lock(std::string res) {
         resource = createResource(res);
     }
 
-    resource->setState(Resource::STARTING);
 
     while((this->retry_max == 0) || retry < this->retry_max) {
+        resource->setState(Resource::STARTING);
 
         unsigned long int wait_time = this->beacon_time * (this->sense_beacons * (1+dist(rng)));  
 
         //debug << this->id << " trying to adquire " << res << " " << wait_time << " " << resource->getState() <<std::endl;
 
         if (!this->listenForPacket(wait_time)) {
-
             resource->setState(Resource::ACQUIRING);
 
             // adquiring time for collision detection
@@ -376,7 +377,6 @@ bool DistributedLock::adquire_lock(std::string res) {
         }
         unsigned long int backoff_time = (this->beacon_time * this->max_backoff) * (1+dist(rng)) ;
         //debug << this->id << " failed attempt to adquire " << res << " backoff " << backoff_time << std::endl;
-        //std::this_thread::sleep_for(std::chrono::milliseconds(backoff_time));
         std::unique_lock<std::mutex> bk_lk(cv_m);
         this->backoff_cv.wait_for(bk_lk, std::chrono::milliseconds(backoff_time));
     }
@@ -398,18 +398,27 @@ bool DistributedLock::adquire_lock() {
         return false;
     }
 
-    for(auto it=this->resources.begin();it!=this->resources.end();it++) {
-        Resource* resource = (*it).second;
-        resource->setState(Resource::STARTING);
+    if (this->on_start) {
+        this->on_start();
     }
 
     while((this->retry_max == 0) || retry < this->retry_max) {
 
+        for(auto it=this->resources.begin();it!=this->resources.end();it++) {
+            Resource* resource = (*it).second;
+            resource->setState(Resource::STARTING);
+
+            debug << this->id << " starting " << resource->getName() << std::endl;
+
+        }
+
         unsigned long int wait_time = this->beacon_time * (this->sense_beacons * (1+dist(rng)));  
 
-        //debug << this->id << " trying to adquire " << res << " " << wait_time << " " << resource->getState() <<std::endl;
+        debug << this->id << " trying to adquire " << wait_time << std::endl;
 
         if (!this->listenForPacket(wait_time)) {
+
+            debug << this->id << " issuing adquiring" << std::endl;
 
             for(auto it=this->resources.begin();it!=this->resources.end();it++) {
                 Resource* resource = (*it).second;
@@ -420,6 +429,8 @@ bool DistributedLock::adquire_lock() {
             auto adquiring_time = std::chrono::milliseconds(  this->beacon_time  * this->sense_beacons );
             std::unique_lock<std::mutex> lk(cv_m);
             if (cv.wait_for(lk, adquiring_time) == std::cv_status::timeout) {
+
+                debug << this->id << " checking whether or not are acquirable" << std::endl;
 
                 bool all_acquirable = true;
                 std::string busy_res = "";
@@ -434,7 +445,7 @@ bool DistributedLock::adquire_lock() {
                     }
                 }
                 if (all_acquirable) {
-                    //debug << this->id << " *** Resource Adquired" << std::endl;
+                    debug << this->id << " *** Resource Adquired" << std::endl;
                     return true;
                 } else {
                     debug << this->id << " *** Resource " << busy_res << " complete!. Falling in Backoff" << std::endl;
@@ -447,7 +458,7 @@ bool DistributedLock::adquire_lock() {
             retry++;
         }
         unsigned long int backoff_time = (this->beacon_time * 2 * this->sense_beacons) * (1+dist(rng)) ;
-        //debug << this->id << " failed attempt to adquire " << res << " backoff " << backoff_time << std::endl;
+        debug << this->id << " failed attempt to adquire backoff " << backoff_time << std::endl;
         std::unique_lock<std::mutex> bk_lk(cv_m);
         this->backoff_cv.wait_for(bk_lk, std::chrono::milliseconds(backoff_time));
     }
@@ -457,12 +468,21 @@ bool DistributedLock::adquire_lock() {
     return false;
 }
 
-
 bool DistributedLock::listenForPacket(unsigned long int wt) {
     std::unique_lock<std::mutex> lk(listen_m);
 
     auto wait_time = std::chrono::milliseconds(wt);
     if (listen_cv.wait_for(lk, wait_time) == std::cv_status::timeout) {
+        return false;
+    }
+    return true;
+}
+
+bool DistributedLock::listenForAnyPacket(unsigned long int wt) {
+    std::unique_lock<std::mutex> lk(any_m);
+
+    auto wait_time = std::chrono::milliseconds(wt);
+    if (any_cv.wait_for(lk, wait_time) == std::cv_status::timeout) {
         return false;
     }
     return true;
@@ -486,7 +506,9 @@ void DistributedLock::actionPerformed(ActionEvent* evt) {
                         resource->updateMember(pkt->getMemberId(), state, pkt->getCount());
                     }
 
-                    if (pkt->getState() == Resource::ACQUIRING || pkt->getState() == Resource::STARTING) {
+                    any_cv.notify_one();
+
+                    if (pkt->getState() == Resource::ACQUIRING) {
                         listen_cv.notify_one();
 
                         if (resource->getState() == Resource::ACQUIRING || resource->getState() == Resource::ACQUIRED) {

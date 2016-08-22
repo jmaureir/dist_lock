@@ -3,7 +3,7 @@
  *
  * Author        : Juan Carlos Maureira
  * Created       : Wed 09 Dec 2015 03:12:59 PM CLT
- * Last Modified : Thu 18 Aug 2016 09:55:56 PM CLT
+ * Last Modified : Mon 22 Aug 2016 11:09:05 AM CLT
  *
  * (c) 2015-2016 Juan Carlos Maureira
  * (c) 2016      Andrew Hart
@@ -15,6 +15,8 @@
 #include <sstream>
 #include <sys/wait.h>
 #include <map>
+#include <condition_variable>
+#include <mutex>
 
 #include "CommHandler.h"
 #include "DistributedLock.h"
@@ -27,6 +29,9 @@
 #define BEACONTIME 50
 #define RETRYNUM 0
 #define RESOURCECOUNT 1
+
+std::condition_variable parent_wait;
+std::mutex              parent_m;
 
 const std::string usage_msg(R"(
 usage: %NAME% [-h] [-v] [-b beacon_time] [-B broadcast_network] [-p port]
@@ -90,6 +95,12 @@ std::string& stringReplace(std::string& s, const std::string& from, const std::s
     return s;
 }
 
+void signal_handler(int signal) {
+    if (signal == SIGUSR1) {
+        parent_wait.notify_one();
+    }
+}
+
 
 int usage(std::string& name) {
     std::string msg(usage_msg);
@@ -121,6 +132,7 @@ int main(int argc, char **argv) {
     std::string resource;
     int c;
 
+    bool         detach      = false;
     bool         query       = false;
     unsigned int port        = PORT;
     unsigned int retry_num   = RETRYNUM;   
@@ -133,8 +145,11 @@ int main(int argc, char **argv) {
     std::string name(basename(std::string(argv[0]).c_str()));
 
     // Process command-line arguments
-    while ((c = getopt (argc, argv, "hvr:n:p:b:B:q:")) != -1) {
+    while ((c = getopt (argc, argv, "hvdr:n:p:b:B:q:")) != -1) {
         switch (c) {
+            case 'd':
+                    detach = true;
+        		    break;
             case 'h':
         		    return showHelp(name);
         		    break;
@@ -192,94 +207,129 @@ int main(int argc, char **argv) {
         }
     }
 
-    DistributedLock* dl = NULL;
-
-    try {
-        dl = new DistributedLock(0,port,beacon_time, bcast_addr);
-
-        dl->setAdquireMaxRetry(retry_num);
-
-        if (res_map.size() > 0 ) {
-
-            for(auto it=res_map.begin();it!=res_map.end();it++) {
-                std::string resource = (*it).first;
-                unsigned int count  = (*it).second;
-                if (!dl->defineResource(resource,count)) {
-                    std::cerr << "DistributedLock: error registering resource " << resource << "." << std::endl;
-                    return 4;
-                }
-            }
-        } else {
-            exit(usage(name));
-        }
-    } catch(Exception& e) {
-        std::cerr << "DistributedLock: initialization error." << std::endl;
-        std::cerr << e.what() << std::endl;
-        return 3;
-    }
+    signal(SIGUSR1, signal_handler);
 
     int status = 0;
 
-    if (!query) { 
+    pid_t pid_d = fork();
 
-        // check command to execute
-        std::stringstream cmd;
+    if (pid_d==0) {
+    
+        setsid();
 
-        if (optind > 0) {
-            if ((strcmp(argv[optind-1],"--")==0) && (argc - optind > 0)) {
-                for (unsigned int i=optind;i < argc;i++) {
-                    cmd << argv[i] << " ";
+        DistributedLock* dl = NULL;
+
+        try {
+            dl = new DistributedLock(0,port,beacon_time, bcast_addr);
+
+            dl->setAdquireMaxRetry(retry_num);
+
+            if (res_map.size() > 0 ) {
+
+                for(auto it=res_map.begin();it!=res_map.end();it++) {
+                    std::string resource = (*it).first;
+                    unsigned int count  = (*it).second;
+                    if (!dl->defineResource(resource,count)) {
+                        std::cerr << "DistributedLock: error registering resource " << resource << "." << std::endl;
+                        return 4;
+                    }
                 }
-     
             } else {
-                std::cerr << "No command specified." << std::endl;
-                return 2;
+                exit(usage(name));
+            }
+        } catch(Exception& e) {
+            std::cerr << "DistributedLock: initialization error." << std::endl;
+            std::cerr << e.what() << std::endl;
+            return 3;
+        }
+
+        if (!query) { 
+
+            // check command to execute
+            std::stringstream cmd;
+
+            if (optind > 0) {
+                if ((strcmp(argv[optind-1],"--")==0) && (argc - optind > 0)) {
+                    for (unsigned int i=optind;i < argc;i++) {
+                        cmd << argv[i] << " ";
+                    }
+         
+                } else {
+                    std::cerr << "No command specified." << std::endl;
+                    return 2;
+                }
+            } else {
+                return usage(name);
+            }
+
+            dl->onStart([&] {
+                pid_t p = getppid();
+                std::cout << "notifying parent to exit " << p << std::endl;
+                kill(p,SIGUSR1); 
+            });
+         
+            if (dl->acquire()) {
+                std::cout << "Resource acquired!" << std::endl;
+                std::cout << "Executing: " << cmd.str() << std::endl;
+                pid_t pid;
+
+                pid = fork();
+
+                if (pid == 0) {
+                    int r = execl("/bin/sh", "sh", "-c", cmd.str().c_str(), NULL);
+                    return r;
+                } else  if (pid < 0) {
+                    std::cerr << "error forking the process." << std::endl;
+                    return 4;
+                } else {
+                    if (waitpid (pid, &status, 0) != pid) {
+                        std::cerr << "error waiting for process." << std::endl;
+                    }
+                    if ( WIFEXITED(status) ) {
+                        int exit_code = WEXITSTATUS(status);
+                        return exit_code;
+                    }
+                    return EXIT_FAILURE;
+                }
+            } else {
+                std::cerr << "Resource(s) not acquired." << std::endl;
+                return 5;
+            }
+
+            if (!dl->releaseAll()) {
+                std::cerr << "resource(s) not released" << std::endl;
             }
         } else {
-            return usage(name);
-        }
-     
-        if (dl->acquire()) {
-            std::cout << "Resource acquired!" << std::endl;
-            std::cout << "Executing: " << cmd.str() << std::endl;
-            pid_t pid;
 
-
-            pid = fork();
-
-            if (pid == 0) {
-                int r = execl("/bin/sh", "sh", "-c", cmd.str().c_str(), NULL);
-                return r;
-            } else  if (pid < 0) {
-                std::cerr << "error forking the process." << std::endl;
-                return 4;
+            if (dl->isBusy(resource)) {
+                status = 1;
             } else {
-                if (waitpid (pid, &status, 0) != pid) {
-                    std::cerr << "error waiting for process." << std::endl;
-                }
-                if ( WIFEXITED(status) ) {
-                    int exit_code = WEXITSTATUS(status);
-                    return exit_code;
-                }
-                return EXIT_FAILURE;
+                status = 0;
             }
-        } else {
-            std::cerr << "Resource(s) not acquired." << std::endl;
-            return 5;
         }
+        delete(dl);
 
-        if (!dl->releaseAll()) {
-            std::cerr << "resource(s) not released" << std::endl;
-        }
+        return status;
     } else {
 
-        if (dl->isBusy(resource)) {
-            status = 1;
+        if (detach) {
+            // wait the children to notify us to exit 
+            std::unique_lock<std::mutex> lk(parent_m);
+            parent_wait.wait(lk);
+
         } else {
-            status = 0;
+            if (waitpid (pid_d, &status, 0) == pid_d) {
+
+                if ( WIFEXITED(status) ) {
+                    status = WEXITSTATUS(status);
+                } else {
+                    status=EXIT_FAILURE;
+                }
+            } else {
+                std::cerr << "error waiting for process." << std::endl;
+                status=EXIT_FAILURE;
+            }
         }
     }
-    delete(dl);
-
     return status;
 }

@@ -4,7 +4,7 @@
  *
  * Author        : Juan Carlos Maureira
  * Created       : Wed 09 Dec 2015 04:07:14 PM CLT
- * Last Modified : Fri 19 Aug 2016 12:32:29 PM CLT
+ * Last Modified : Fri 19 Aug 2016 06:54:12 PM CLT
  *
  * (c) 2015-2016 Juan Carlos Maureira
  * (c) 2016      Andrew Hart
@@ -123,6 +123,10 @@ class DistributedLock : public ActionListener {
                     this->count = c;
                 }
 
+                std::string getName() {
+                    return this->name;
+                }
+
                 unsigned int getCount() {
                     return this->count;
                 }
@@ -178,6 +182,9 @@ class DistributedLock : public ActionListener {
         std::condition_variable    listen_cv;
         std::mutex                 listen_m;
 
+        std::condition_variable    any_cv;
+        std::mutex                 any_m;
+
         std::condition_variable    cv;
         std::mutex                 cv_m;
 
@@ -190,9 +197,10 @@ class DistributedLock : public ActionListener {
 
         bool adquire_lock(std::string res);
         bool adquire_lock();
-
         void release_lock(std::string res);
         Resource::MemberList query_lock(std::string res);
+
+        std::function<void()> on_start;
 
         unsigned int getRandomId();
 
@@ -201,6 +209,7 @@ class DistributedLock : public ActionListener {
         static CommHandler* getCommHandlerInstance(std::string bcast_addr, unsigned int port);
 
         bool listenForPacket(unsigned long int wt);
+        bool listenForAnyPacket(unsigned long int wt);
 
     public:
         DistributedLock(unsigned int id=0, unsigned int port=5000,unsigned int beacon_time = 50, std::string bcast_addr = "127.255.255.255") {
@@ -252,6 +261,10 @@ class DistributedLock : public ActionListener {
         bool defineResource(std::string resource,unsigned int count=1);
     
         void setAdquireMaxRetry(unsigned int n);
+
+        void onStart(std::function<void()> handler) {
+            this->on_start = handler;
+        }
 
         virtual void actionPerformed(ActionEvent* evt);
 
