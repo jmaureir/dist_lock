@@ -4,7 +4,7 @@
  *
  * Author        : Juan Carlos Maureira
  * Created       : Wed 09 Dec 2015 04:09:39 PM CLT
- * Last Modified : Fri 23 Sep 2016 10:54:49 AM CLT
+ * Last Modified : Fri 23 Sep 2016 02:22:52 PM CLT
  *
  * (c) 2015-2016 Juan Carlos Maureira
  * (c) 2016      Andrew Hart
@@ -255,7 +255,7 @@ bool DistributedLock::isWaiting(std::string res) {
 
         for(auto it=m_list.begin();it!=m_list.end();it++) {
             Resource::Member* m = (*it).second;
-            if (m->state == Resource::ACQUIRING || m->state == Resource::STARTING) {
+            if (m->state == Resource::ACQUIRING || m->state == Resource::STARTING || m->state == Resource::IDLE) {
                 ret = true;
                 break;
             }
@@ -570,6 +570,7 @@ void DistributedLock::actionPerformed(ActionEvent* evt) {
                         Resource::State state = (Resource::State)pkt->getState();
 
                         resource->updateMember(pkt->getMemberId(), state, pkt->getCount());
+                        debug << "updating " << pkt->getMemberId()<< " " << state << " " << pkt->getCount() << std::endl;
                     }
 
                     any_cv.notify_one();
