@@ -4,7 +4,7 @@
  *
  * Author        : Juan Carlos Maureira
  * Created       : Wed 09 Dec 2015 04:09:39 PM CLT
- * Last Modified : Mon 22 Aug 2016 03:51:00 PM CLT
+ * Last Modified : Fri 23 Sep 2016 10:54:49 AM CLT
  *
  * (c) 2015-2016 Juan Carlos Maureira
  * (c) 2016      Andrew Hart
@@ -248,6 +248,32 @@ bool DistributedLock::isAny(std::string res) {
     return ret;
 }
 
+bool DistributedLock::isWaiting(std::string res) {
+    bool ret = false;
+    try {
+        Resource::MemberList m_list = this->query_lock(res);
+
+        for(auto it=m_list.begin();it!=m_list.end();it++) {
+            Resource::Member* m = (*it).second;
+            if (m->state == Resource::ACQUIRING || m->state == Resource::STARTING) {
+                ret = true;
+                break;
+            }
+        }
+
+        // dispose returned list since it is a copy
+        for(auto it=m_list.begin();it!=m_list.end();) {
+            Resource::Member* m = (*it).second;
+            m_list.erase(it++);
+            delete(m);
+        }
+
+    } catch(Exception& e) {
+        std::cerr << e.what() << std::endl;
+    }
+
+    return ret;
+}
 
 bool DistributedLock::releaseAll() {
     bool r = true;

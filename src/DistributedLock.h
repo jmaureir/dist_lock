@@ -4,7 +4,7 @@
  *
  * Author        : Juan Carlos Maureira
  * Created       : Wed 09 Dec 2015 04:07:14 PM CLT
- * Last Modified : Mon 22 Aug 2016 12:24:49 PM CLT
+ * Last Modified : Fri 23 Sep 2016 10:49:29 AM CLT
  *
  * (c) 2015-2016 Juan Carlos Maureira
  * (c) 2016      Andrew Hart
@@ -261,6 +261,7 @@ class DistributedLock : public ActionListener {
 
         bool isBusy(std::string resource);
         bool isAny(std::string resource);
+        bool isWaiting(std::string resource);
 
         bool defineResource(std::string resource,unsigned int count=1);
     

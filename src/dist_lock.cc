@@ -3,7 +3,7 @@
  *
  * Author        : Juan Carlos Maureira
  * Created       : Wed 09 Dec 2015 03:12:59 PM CLT
- * Last Modified : Mon 22 Aug 2016 03:50:19 PM CLT
+ * Last Modified : Fri 23 Sep 2016 11:00:25 AM CLT
  *
  * (c) 2015-2016 Juan Carlos Maureira
  * (c) 2016      Andrew Hart
@@ -40,7 +40,7 @@ bool acquired = false;
 
 const std::string usage_msg(R"(
 usage: %NAME% [-h] [-v] [-d] [-b beacon_time] [-B broadcast_network] [-p port]
-    [-n max_tries] {-q resource | -r resource1[:count1 [-r resource2[:count2] ...]} --
+    [-n max_tries] {-q resource | -Q resource -W resource | -r resource1[:count1 [-r resource2[:count2] ...]} --
     command_to_execute [args ...]
 )");
 
@@ -69,7 +69,19 @@ Show this help and exit.
 -v
 Display version information and exit.
 
--r resourcen[:countn]
+-q resource
+Query the resource for busy state. In other words, it returns 1 when the resource
+is acquired. Otherwise, it returns 0 in the exit code.
+
+-Q resource
+Query the resource for any state. In other words, it returns 1 when there is other
+processes contending for the resource, no mater the state of each one of them.
+
+-W resource
+Query the resource for acquiring or starting state. Returns 1 when there is at least
+one process trying to acquire the resource. 
+
+-r resource[:countn]
 The name of the n-th resource and the number of processes that should be allowed 
 to simultaneously acquire access to it. At least one resource must be specified, 
 but more than one may be specified, in which case all such resources must be 
@@ -148,6 +160,7 @@ int main(int argc, char **argv) {
 
     bool         is_any      = false;
     bool         query       = false;
+    bool         is_waiting  = false;
     unsigned int port        = PORT;
     unsigned int retry_num   = RETRYNUM;   
     unsigned int beacon_time = BEACONTIME; // ms
@@ -159,7 +172,7 @@ int main(int argc, char **argv) {
     std::string name(basename(std::string(argv[0]).c_str()));
 
     // Process command-line arguments
-    while ((c = getopt (argc, argv, "hvdr:n:p:b:B:q:Q:")) != -1) {
+    while ((c = getopt (argc, argv, "hvdr:n:p:b:B:q:Q:W:")) != -1) {
         switch (c) {
             case 'd':
                     detach_i = true;
@@ -181,6 +194,7 @@ int main(int argc, char **argv) {
                     resource = std::string(optarg);
                     is_any = false;
                     query = true;
+                    is_waiting = false;
                     res_map[resource] = 1;
                 }
                 break;
@@ -189,6 +203,16 @@ int main(int argc, char **argv) {
                     resource = std::string(optarg);
                     query = false;
                     is_any = true;
+                    is_waiting = false;
+                    res_map[resource] = 1;
+                }
+                break;
+            case 'W':
+                if (optarg!=NULL && strlen(optarg) > 0 ) {
+                    resource = std::string(optarg);
+                    query = false;
+                    is_any = false;
+                    is_waiting = true;
                     res_map[resource] = 1;
                 }
                 break;
@@ -271,19 +295,25 @@ int main(int argc, char **argv) {
             return 3;
         }
 
-        if (query && !is_any) { 
+        if (query && !is_any && !is_waiting) { 
             if (dl->isBusy(resource)) {
                 status = 1;
             } else {
                 status = 0;
             }
-        } else if (!query && is_any) {
+        } else if (!query && is_any && !is_waiting) {
             if (dl->isAny(resource)) {
                 status = 1;
             } else {
                 status = 0;
             }
-        } else if (!query && !is_any) {
+        } else if (!query && !is_any && is_waiting) {
+            if (dl->isWaiting(resource)) {
+                status = 1;
+            } else {
+                status = 0;
+            }
+        } else if (!query && !is_any && !is_waiting) {
             // check command to execute
             std::stringstream cmd;
 
@@ -314,7 +344,6 @@ int main(int argc, char **argv) {
                 pid_t pid;
 
                 if (detach_i && retry_num > 0) {
-                    std::cout << "notifying parent about acquisition" << std::endl;
                     pid_t p = getppid();
                     kill(p,SIGUSR1); 
                 }
