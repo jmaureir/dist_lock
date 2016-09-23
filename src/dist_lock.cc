@@ -3,7 +3,7 @@
  *
  * Author        : Juan Carlos Maureira
  * Created       : Wed 09 Dec 2015 03:12:59 PM CLT
- * Last Modified : Fri 23 Sep 2016 11:00:25 AM CLT
+ * Last Modified : Fri 23 Sep 2016 12:06:17 PM CLT
  *
  * (c) 2015-2016 Juan Carlos Maureira
  * (c) 2016      Andrew Hart
@@ -17,23 +17,30 @@
 #include <map>
 #include <condition_variable>
 #include <mutex>
+#include <regex>
 
 #include "CommHandler.h"
 #include "DistributedLock.h"
 #include "StringTokenizer.h"
 
 // Version number and default parameter values
-#define VERSION "1.1.0"
+#define VERSION           "1.1.0"
 #define BROADCASTADDRESS "127.255.255.255"
-#define PORT 5000
-#define BEACONTIME 50
-#define RETRYNUM 0
-#define RESOURCECOUNT 1
+#define PORT              5000
+#define BEACONTIME        50
+#define RETRYNUM          0
+#define RESOURCECOUNT     1
+#define PREFIX_ENV        "DISTLOCK"
+
+typedef std::map<std::string, std::string> EnvVarList;
 
 std::condition_variable parent_wait;
 std::mutex              parent_m;
 
 pid_t                   pid_d;
+
+EnvVarList              env_list;
+char**                  env_array  = NULL;
 
 bool detach_i = false;  // detach on initialization
 bool acquired = false;
@@ -127,7 +134,6 @@ void signal_handler(int signal) {
     }
 }
 
-
 int usage(std::string& name) {
     std::string msg(usage_msg);
     msg = stringReplace(msg, "%NAME%", name);	
@@ -153,6 +159,36 @@ int showHelp(std::string& name) {
     return 0;
 }
 
+void updateEnvironmentArray() {
+    // updaye the environmental variables to expose
+    // to the calling script
+    if (env_array != NULL) {
+        for(int i=0;i<env_list.size()-1;i++) {
+            delete(env_array[i]);
+        }
+        delete[](env_array);
+    }   
+    env_array = new char*[env_list.size()+1];
+    int count = 0;
+    for(auto it=env_list.begin();it!=env_list.end();it++) {
+        std::string key = (*it).first;
+        std::string val = (*it).second;
+        std::string env = key+"="+val;
+        char* env_ch = new char[env.size()+1];
+        strcpy(env_ch,env.c_str());
+        env_ch[env.size()] = '\0';
+        env_array[count] = env_ch;
+        count++;
+    }   
+    env_array[count] = NULL;
+}
+
+void registerEnv(std::string name, std::string val) {
+    env_list[name] = val;
+    updateEnvironmentArray();
+}
+
+
 int main(int argc, char **argv) {
 
     std::string resource;
@@ -165,6 +201,11 @@ int main(int argc, char **argv) {
     unsigned int retry_num   = RETRYNUM;   
     unsigned int beacon_time = BEACONTIME; // ms
     std::string  bcast_addr  = BROADCASTADDRESS;
+    std::string  prefix_env  = PREFIX_ENV;
+
+    if (getenv("DISTLOCK_PREFIX")) {
+        prefix_env = getenv("DISTLOCK_PREFIX");
+    }
 
     std::map<std::string,unsigned int> res_map;
  
@@ -172,7 +213,7 @@ int main(int argc, char **argv) {
     std::string name(basename(std::string(argv[0]).c_str()));
 
     // Process command-line arguments
-    while ((c = getopt (argc, argv, "hvdr:n:p:b:B:q:Q:W:")) != -1) {
+    while ((c = getopt (argc, argv, "hvdr:n:p:b:B:q:Q:W:e:")) != -1) {
         switch (c) {
             case 'd':
                     detach_i = true;
@@ -188,6 +229,10 @@ int main(int argc, char **argv) {
         		    break;
             case 'B':
                     bcast_addr = optarg;
+        		    break;
+            case 'e':
+                    prefix_env = optarg;
+                    stringReplace( prefix_env, " ","_");
         		    break;
             case 'q':
                 if (optarg!=NULL && strlen(optarg) > 0 ) {
@@ -216,7 +261,6 @@ int main(int argc, char **argv) {
                     res_map[resource] = 1;
                 }
                 break;
-
             case 'r':
                 if (optarg!=NULL && strlen(optarg) > 0 ) {
                     resource = std::string(optarg);
@@ -315,14 +359,22 @@ int main(int argc, char **argv) {
             }
         } else if (!query && !is_any && !is_waiting) {
             // check command to execute
+            char** cmd_argv = NULL;
             std::stringstream cmd;
 
-            if (optind > 0) {
+            if (optind > 0) {                
                 if ((strcmp(argv[optind-1],"--")==0) && (argc - optind > 0)) {
+
+                    int num_args = argc - optind;
+                    cmd_argv = new char*[num_args+1];
+                    int j = 0;
                     for (unsigned int i=optind;i < argc;i++) {
+                        cmd_argv[j] = argv[i];
                         cmd << argv[i] << " ";
+                        j++;
                     }
-         
+                    cmd_argv[j] = NULL;        
+ 
                 } else {
                     std::cerr << "No command specified." << std::endl;
                     return 2;
@@ -348,11 +400,16 @@ int main(int argc, char **argv) {
                     kill(p,SIGUSR1); 
                 }
 
+
                 pid = fork();
 
                 if (pid == 0) {
-                    int r = execl("/bin/sh", "sh", "-c", cmd.str().c_str(), NULL);
+
+                    registerEnv(prefix_env+"_ID",std::to_string(dl->getId()));
+
+                    int r = execvpe(cmd_argv[0],cmd_argv,env_array);
                     return r;
+
                 } else  if (pid < 0) {
                     std::cerr << "error forking the process." << std::endl;
                     return 4;
