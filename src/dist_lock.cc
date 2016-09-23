@@ -3,7 +3,7 @@
  *
  * Author        : Juan Carlos Maureira
  * Created       : Wed 09 Dec 2015 03:12:59 PM CLT
- * Last Modified : Fri 23 Sep 2016 12:06:17 PM CLT
+ * Last Modified : Fri 23 Sep 2016 12:31:24 PM CLT
  *
  * (c) 2015-2016 Juan Carlos Maureira
  * (c) 2016      Andrew Hart
@@ -400,12 +400,22 @@ int main(int argc, char **argv) {
                     kill(p,SIGUSR1); 
                 }
 
-
                 pid = fork();
 
                 if (pid == 0) {
 
                     registerEnv(prefix_env+"_ID",std::to_string(dl->getId()));
+                    std::string str_res_list;
+                    for(auto it=res_map.begin();it!=res_map.end();it++) {
+                        std::string resource = (*it).first;
+                        int count  = (*it).second;
+                        std::string res = resource + ":" + std::to_string(count);
+                        str_res_list = str_res_list + res + ",";
+                    }
+                    if (str_res_list.length() > 0 ) {
+                        str_res_list = str_res_list.substr(0, str_res_list.length()-1);                   
+                    }
+                    registerEnv(prefix_env+"_RESOURCES",str_res_list);
 
                     int r = execvpe(cmd_argv[0],cmd_argv,env_array);
                     return r;
