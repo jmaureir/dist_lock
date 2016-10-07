@@ -3,7 +3,7 @@
  *
  * Author        : Juan Carlos Maureira
  * Created       : Wed 09 Dec 2015 03:12:59 PM CLT
- * Last Modified : Fri 23 Sep 2016 12:31:24 PM CLT
+ * Last Modified : Fri 07 Oct 2016 05:51:30 PM CLT
  *
  * (c) 2015-2016 Juan Carlos Maureira
  * (c) 2016      Andrew Hart
@@ -168,6 +168,7 @@ void updateEnvironmentArray() {
         }
         delete[](env_array);
     }   
+
     env_array = new char*[env_list.size()+1];
     int count = 0;
     for(auto it=env_list.begin();it!=env_list.end();it++) {
@@ -188,8 +189,20 @@ void registerEnv(std::string name, std::string val) {
     updateEnvironmentArray();
 }
 
+void inheritEnvironment(char** envp) {
+    char** env;
+    for (env = envp; *env != 0; env++) {
+        std::string e(*env);
+        int p = e.find("=");
+        std::string name = e.substr(0,p);
+        std::string val = e.substr(p+1);
 
-int main(int argc, char **argv) {
+        env_list[name] = val;
+    }
+    updateEnvironmentArray();
+}
+
+int main(int argc, char **argv, char** envp) {
 
     std::string resource;
     int c;
@@ -404,6 +417,8 @@ int main(int argc, char **argv) {
 
                 if (pid == 0) {
 
+                    inheritEnvironment(envp);
+
                     registerEnv(prefix_env+"_ID",std::to_string(dl->getId()));
                     std::string str_res_list;
                     for(auto it=res_map.begin();it!=res_map.end();it++) {
@@ -416,7 +431,7 @@ int main(int argc, char **argv) {
                         str_res_list = str_res_list.substr(0, str_res_list.length()-1);                   
                     }
                     registerEnv(prefix_env+"_RESOURCES",str_res_list);
-
+    
                     int r = execvpe(cmd_argv[0],cmd_argv,env_array);
                     return r;
 

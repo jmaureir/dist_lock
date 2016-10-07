@@ -6,4 +6,6 @@ echo "D_T_ID: $D_T_ID"
 
 echo "DISTLOCK_RESOURCES: $DISTLOCK_RESOURCES"
 
+set
+
 sleep 10
