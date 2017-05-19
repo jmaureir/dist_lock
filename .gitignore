@@ -22,3 +22,6 @@ libtool
 stamp-h1
 *.log
 *.trs
+*.bak
+*.exe
+
