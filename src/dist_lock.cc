@@ -9,6 +9,10 @@
  * (c) 2016      Andrew Hart
  */
 
+#if defined(__CYGWIN__) && !defined(_WIN32)
+#define _GNU_SOURCE
+#endif
+
 #include <unistd.h> 
 #include <iostream>
 #include <string>
@@ -47,7 +51,7 @@ bool acquired = false;
 
 const std::string usage_msg(R"(
 usage: %NAME% [-h] [-v] [-d] [-b beacon_time] [-B broadcast_network] [-p port]
-    [-n max_tries] {-q resource | -Q resource -W resource | -r resource1[:count1 [-r resource2[:count2] ...]} --
+    [-n max_tries] {-q resource | -Q resource | -W resource | -r resource1[:count1] [-r resource2[:count2] ...]} --
     command_to_execute [args ...]
 )");
 

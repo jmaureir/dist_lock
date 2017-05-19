@@ -32,7 +32,7 @@ void _close_socket(int fd) {
 
 union control_data {
     struct cmsghdr  cmsg;
-    u_char          data[DSTADDR_DATASIZE];
+    unsigned char          data[DSTADDR_DATASIZE];
 };
 
 int UDPSocket::create_socket() {
@@ -98,7 +98,7 @@ UDPSocket::UDPSocket(int port) {
 	}
 
 	// prepare the server address to bind the socket
-	bzero((char *) &(this->serveraddr), sizeof(this->serveraddr));
+	memset((char *) &(this->serveraddr), 0, sizeof(this->serveraddr));
 	this->serveraddr.sin_family = AF_INET;
 	this->serveraddr.sin_addr.s_addr = htonl(INADDR_ANY);
 	this->serveraddr.sin_port = htons(this->port);
@@ -122,7 +122,7 @@ UDPSocket::UDPSocket(unsigned int s_addr, int port) {
     std::cout << "saddr " << s_addr << std::endl;
 
 	// prepare the server address to bind the socket
-	bzero((char *) &(this->serveraddr), sizeof(this->serveraddr));
+	memset((char *) &(this->serveraddr), 0, sizeof(this->serveraddr));
 	this->serveraddr.sin_family = AF_INET;
 	this->serveraddr.sin_addr.s_addr = s_addr;
 	this->serveraddr.sin_port = htons(this->port);
@@ -162,7 +162,7 @@ bool UDPSocket::send(UDPDatagram* pkt) {
 
 	// set destination 
 	sockaddr_in dstaddr;
-	bzero((char *) &dstaddr, sizeof(dstaddr));
+	memset((char *) &dstaddr, 0, sizeof(dstaddr));
 	dstaddr.sin_family = AF_INET;
 	dstaddr.sin_addr.s_addr = pkt->getDestinationAddr().s_addr;
 	dstaddr.sin_port = htons(pkt->getDestinationPort());
@@ -179,7 +179,7 @@ bool UDPSocket::send(UDPDatagram* pkt) {
 UDPDatagram* UDPSocket::receive() {
 
 	// clean the receiving buffer
-	bzero(recv_buf, BUFSIZE);
+	memset(recv_buf, 0, BUFSIZE);
 
 	// wait for an incomming udp packet
 	struct sockaddr_in clientaddr;    /* client addr */

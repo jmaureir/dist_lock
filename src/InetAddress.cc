@@ -10,9 +10,6 @@
 
 #include "InetAddress.h"
 
-#include <sys/socket.h>
-#include <netinet/in.h>
-#include <arpa/inet.h>
 
 const InetAddress InetAddress::BROADCAST_ADDRESS("255.255.255.255");
 const InetAddress InetAddress::UNDEFINED_ADDRESS;
@@ -49,64 +46,37 @@ InetAddress::InetAddress(const unsigned char ip[4]) {
 	std::stringstream tmp;
 	tmp << (unsigned int)ip[0] << "." << (unsigned int)ip[1] << "." << (unsigned int)ip[2] << "." << (unsigned int)ip[3];
 	this->theIPAddress = tmp.str();
-	inet_aton(this->theIPAddress.c_str(),&(this->in_address));
+	inet_pton(AF_INET, this->theIPAddress.c_str(), &(this->in_address));
 }
 
 InetAddress::InetAddress(const char* ip_chr) {
 	std::string ip = ip_chr;
 
 	if (ip!="") {
-
 		this->theIPAddress  = ip;
-
-		struct hostent       theHostEntity;
-		struct hostent*      theResult;
-
-		char                 theBuffer[1024];
-		int e = 0;
-		int r = 0;
-
-		r = gethostbyname_r(ip.c_str(),&theHostEntity,theBuffer,sizeof(theBuffer),&theResult ,&e);
-
-		if (theResult==NULL) {
+		struct addrinfo hints;
+		struct addrinfo* entry;
+// Fill hints struct
+		memset(&hints, 0, sizeof (struct addrinfo));
+		hints.ai_family = PF_INET;
+		hints.ai_socktype = SOCK_DGRAM;
+// Look up address info for host (ip)
+		int r = getaddrinfo(ip_chr, NULL, &hints, &entry);
+		if (r!=0 || entry==0) {
 			throw(Exception("Unknown host Address"));
-			return;
+    	return;
 		}
-
-		unsigned int ip1,ip2,ip3,ip4;
-
-		if ((int)theHostEntity.h_addr_list[0][0]<0) {
-			ip1 = 256 + (int)theHostEntity.h_addr_list[0][0];
-		} else {
-			ip1 = (int)theHostEntity.h_addr_list[0][0];
-		};
-		if ((int)theHostEntity.h_addr_list[0][1]<0) {
-			ip2 = 256 + (int)theHostEntity.h_addr_list[0][1];
-		} else {
-			ip2 = (int)theHostEntity.h_addr_list[0][1];
-		};
-		if ((int)theHostEntity.h_addr_list[0][2]<0) {
-			ip3 = 256 + (int)theHostEntity.h_addr_list[0][2];
-		} else {
-			ip3 = (int)theHostEntity.h_addr_list[0][2];
-		};
-		if ((int)theHostEntity.h_addr_list[0][3]<0) {
-			ip4 = 256 + (int)theHostEntity.h_addr_list[0][3];
-		} else {
-			ip4 = (int)theHostEntity.h_addr_list[0][3];
-		};
-
+		sockaddr_in *addr = (sockaddr_in*)entry->ai_addr;
 		this->bytes = new unsigned char[InetAddress::LEN];
-		this->bytes[0] = ip1;
-		this->bytes[1] = ip2;
-		this->bytes[2] = ip3;
-		this->bytes[3] = ip4;
-
+		memcpy(this->bytes, &(addr->sin_addr.s_addr), InetAddress::LEN);
+		freeaddrinfo(entry); // release addrinfo struct
+// Construct standard dotted string address representation
 		std::stringstream tmp;
-		tmp << ip1 << "." << ip2 << "." << ip3 << "." << ip4;
+		tmp << (unsigned int)this->bytes[0] << "." << (unsigned int)this->bytes[1]
+		    << "." << (unsigned int)this->bytes[2] << "." << (unsigned int)this->bytes[3];
 		this->theIPAddress = tmp.str();
-
-		inet_aton(this->theIPAddress.c_str(),&(this->in_address));
+// Convert the string address into an in_addr struct in network byte order
+		inet_pton(AF_INET, this->theIPAddress.c_str(), &(this->in_address));
 
 	} else {
 		this->bytes = new unsigned char[InetAddress::LEN];

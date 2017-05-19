@@ -21,7 +21,7 @@ void sec_sleep(long sec) {
 }
 
 void Thread::start() {
-	srand((u_int)pthread_self());
+	srand(static_cast<unsigned int>(reinterpret_cast<uintptr_t>(pthread_self())));
 	int e = pthread_create(&this->theThread, &this->tattr, &_run, this);
 	if (e!= 0) {
 		debug << "unable to create Thread : " << strerror(e) << std::endl;
